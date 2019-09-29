@@ -13,7 +13,7 @@
             "username": "110"
         },
         {
-            "username": "231"
+            "username": "Cristina Palomares Bonache"
         },
         {
             "username": "111"
@@ -861,235 +861,235 @@
         },
         {
             "requirement": "399543",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "408980",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "412584",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "412880",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "413195",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "413197",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "413199",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "413200",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "413316",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "413325",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "413328",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "413331",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "413333",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "413334",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "413335",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "413337",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "413338",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "413980",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "414250",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "416799",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "420180",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "420581",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "421127",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "423220",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "423870",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "424657",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "426683",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "426853",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "429282",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "429301",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "429332",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "431890",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "435647",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "435799",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "436626",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "439415",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "439640",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "439697",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "445551",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "447930",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "447934",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "458640",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "465121",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "468123",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "477197",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "480911",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "483848",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "484772",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "491521",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "494151",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "497748",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "500156",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "502090",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "504098",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "509787",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "510625",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "512099",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "512687",
-            "person": "231"
+            "person": "Cristina Palomares Bonache"
         },
         {
             "requirement": "470720",
@@ -44686,7 +44686,7 @@
         {
             "id": "398938",
             "effort": 1,
-            "description": "The translation of  \"Update Manager\" need to be changed as  \"Gerenciador de Atualizações\"",
+            "description": "The translation of  \"Update Manager\" need to be changed as  \"Gerenciador de Atualizaï¿½ï¿½es\"",
             "modified_at": "2013-01-24T13:25:48Z"
         },
         {
@@ -68332,7 +68332,7 @@
         {
             "id": "490425",
             "effort": 1,
-            "description": "Hang on \"Installed JREs\" > Add…",
+            "description": "Hang on \"Installed JREs\" > Addï¿½",
             "modified_at": "2016-09-01T07:46:51Z"
         },
         {
@@ -70390,13 +70390,13 @@
         {
             "id": "496833",
             "effort": 1,
-            "description": "[Tools] Application model editor doesn’t allow to create a ToolBar for a CompositePart",
+            "description": "[Tools] Application model editor doesnï¿½t allow to create a ToolBar for a CompositePart",
             "modified_at": "2016-06-29T12:20:29Z"
         },
         {
             "id": "496835",
             "effort": 1,
-            "description": "[Tools] Application model editor doesn’t allow the management of “Variables” for a CompositePart",
+            "description": "[Tools] Application model editor doesnï¿½t allow the management of ï¿½Variablesï¿½ for a CompositePart",
             "modified_at": "2016-06-28T11:54:40Z"
         },
         {
@@ -73024,7 +73024,7 @@
         {
             "id": "507404",
             "effort": 1,
-            "description": "TrimBarLayout´s computeSize method may cause NPE due to missing MTrimBar",
+            "description": "TrimBarLayoutï¿½s computeSize method may cause NPE due to missing MTrimBar",
             "modified_at": "2016-11-15T13:25:28Z"
         },
         {
@@ -76798,7 +76798,7 @@
         {
             "id": "520187",
             "effort": 1,
-            "description": "[Preferences] ScopedPreferenceStore#setToDefault should do string compare",
+            "description": "[Preferences]ï¿½ScopedPreferenceStore#setToDefault should do string compare",
             "modified_at": "2017-07-27T15:27:44Z"
         },
         {
@@ -77260,7 +77260,7 @@
         {
             "id": "522051",
             "effort": 1,
-            "description": "[ModelServiceImpl] Provide better error message when event broker cannot be retrieved",
+            "description": "[ModelServiceImpl]ï¿½Provide better error message when event broker cannot be retrieved",
             "modified_at": "2017-09-28T14:19:41Z"
         },
         {
@@ -77992,7 +77992,7 @@
         {
             "id": "528185",
             "effort": 1,
-            "description": "[refactoring] Replace usage of org.eclipse.jface.util.Assert by org.eclipse.core.runtime.Assert",
+            "description": "[refactoring]ï¿½Replace usage of org.eclipse.jface.util.Assert by org.eclipse.core.runtime.Assert",
             "modified_at": "2018-01-30T14:27:50Z"
         },
         {
@@ -78616,7 +78616,7 @@
         {
             "id": "530917",
             "effort": 1,
-            "description": "[sonar] Resolve redundant modifier",
+            "description": "[sonar]ï¿½Resolve redundant modifier",
             "modified_at": "2018-05-17T14:24:06Z"
         },
         {
@@ -78634,7 +78634,7 @@
         {
             "id": "531019",
             "effort": 1,
-            "description": "Inicialização do Eclipse",
+            "description": "Inicializaï¿½ï¿½o do Eclipse",
             "modified_at": "2018-02-16T06:33:38Z"
         },
         {
@@ -90478,7 +90478,7 @@
         {
             "id": "446797",
             "effort": 1,
-            "description": "“Unhandled even loop exception” when working with eclipse IDE",
+            "description": "ï¿½Unhandled even loop exceptionï¿½ when working with eclipse IDE",
             "modified_at": "2014-10-15T07:45:31Z"
         },
         {
@@ -96496,7 +96496,7 @@
         {
             "id": "490026",
             "effort": 1,
-            "description": "Can’t launch Eclipse on Ubuntu Mate 16.04",
+            "description": "Canï¿½t launch Eclipse on Ubuntu Mate 16.04",
             "modified_at": "2017-12-11T02:51:42Z"
         },
         {
@@ -99184,7 +99184,7 @@
         {
             "id": "502711",
             "effort": 1,
-            "description": "[Cocoa][10.12] crashes on „macOS Sierra“ related to NSCopyBits",
+            "description": "[Cocoa][10.12] crashes on ï¿½macOS Sierraï¿½ related to NSCopyBits",
             "modified_at": "2018-06-25T13:14:13Z"
         },
         {
@@ -103054,7 +103054,7 @@
         {
             "id": "526257",
             "effort": 1,
-            "description": "[StyledText] Suppress background drawing",
+            "description": "[StyledText]ï¿½Suppress background drawing",
             "modified_at": "2017-10-25T17:20:18Z"
         },
         {
@@ -103276,7 +103276,7 @@
         {
             "id": "527283",
             "effort": 1,
-            "description": "Can’t launch Eclipse Oxygen 1a on Ubuntu Mate 16.04",
+            "description": "Canï¿½t launch Eclipse Oxygen 1a on Ubuntu Mate 16.04",
             "modified_at": "2018-04-07T13:03:05Z"
         },
         {
@@ -103768,7 +103768,7 @@
         {
             "id": "529227",
             "effort": 1,
-            "description": "FileDialog setFilterExtensions() doesn’t allow to choose files that were filtered with two dots in their extension",
+            "description": "FileDialog setFilterExtensions() doesnï¿½t allow to choose files that were filtered with two dots in their extension",
             "modified_at": "2018-01-23T12:13:54Z"
         },
         {
@@ -109096,7 +109096,7 @@
         {
             "id": "547369",
             "effort": 1,
-            "description": "Settíng colors of TableItem has no effect in Eclipse 2018-12",
+            "description": "Settï¿½ng colors of TableItem has no effect in Eclipse 2018-12",
             "modified_at": "2019-05-16T08:22:00Z"
         },
         {
@@ -109257,7 +109257,7 @@
         },
         {
             "project": "1",
-            "person": "231",
+            "person": "Cristina Palomares Bonache",
             "availability": 100
         },
         {
