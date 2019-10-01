@@ -317,7 +317,7 @@ public class StakeholdersRecommenderService {
         return res;
     }
 
-    private void purge(String organization) {
+    private void purgeByOrganization(String organization) {
         if (ProjectRepository.findByOrganization(organization) != null)
             ProjectRepository.deleteByOrganization(organization);
         if (PersonSRRepository.findByOrganization(organization) != null)
@@ -359,7 +359,7 @@ public class StakeholdersRecommenderService {
 
 
     public Integer addBatch(BatchSchema request, Boolean withAvailability, Boolean withComponent, String organization, Boolean autoMapping, Boolean bugzillaPreprocessing, Boolean logging, Integer test) throws Exception {
-        purge(organization);
+        purgeByOrganization(organization);
         verify(request);
         Map<String, Requirement> recs = new HashMap<>();
         List<Requirement> requeriments;
