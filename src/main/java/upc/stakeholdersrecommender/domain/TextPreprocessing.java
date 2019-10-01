@@ -31,14 +31,12 @@ public class TextPreprocessing {
                 reader.close();
             }
             for (String l : text.split(" ")) {
+                if (!(l.toLowerCase().equals("null") && !l.equals("null") && !l.equals("Null")) && !l.toUpperCase().equals(l))  l = l.toLowerCase();
                 if (l != null && !exclusions.contains(l) && l.length() > 1) {
-                    if (!(l.toLowerCase().equals("null") && !l.equals("null") && !l.equals("Null")) && !l.toUpperCase().equals(l))
-                        l = l.toLowerCase();
                     trueRes = trueRes.concat(l + " ");
                 }
             }
         }
-        //trueRes=trueRes.replaceAll("[.]","");
         return trueRes;
 
     }
