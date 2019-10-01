@@ -61,11 +61,13 @@ public class StakeholdersRecommenderController {
         if (!keywords) {
             s = formatter.format(new Date());
             System.out.println(s + " | Finished batch process from " + organization);
+            System.gc();
             return new ResponseEntity<>(new BatchReturnSchema(res), HttpStatus.CREATED);
         } else {
             s = formatter.format(new Date());
             List<ProjectKeywordSchema> keys = stakeholdersRecommenderService.extractKeywords(organization, batch);
             System.out.println(s + " | Finished batch process " + organization);
+            System.gc();
             return new ResponseEntity<>(keys, HttpStatus.CREATED);
         }
     }
@@ -80,6 +82,7 @@ public class StakeholdersRecommenderController {
         stakeholdersRecommenderService.recommend_reject(rejected, user, requirement, organization);
         s = formatter.format(new Date());
         System.out.println(s + " | Finished rejection of recommendation from " + organization);
+        System.gc();
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
 
@@ -94,6 +97,7 @@ public class StakeholdersRecommenderController {
         List<RecommendReturnSchema> ret = stakeholdersRecommenderService.recommend(request, k, projectSpecific, organization, 0);
         s = formatter.format(new Date());
         System.out.println(s + " | Finished recommendation from " + organization);
+        System.gc();
         return new ResponseEntity<>(ret, HttpStatus.CREATED);
     }
 
@@ -107,6 +111,7 @@ public class StakeholdersRecommenderController {
         effortCalc.setEffort(eff, project, organization);
         s = formatter.format(new Date());
         System.out.println(s + " | Finished set effort from " + organization);
+        System.gc();
         return new ResponseEntity(HttpStatus.CREATED);
     }
 
@@ -120,6 +125,7 @@ public class StakeholdersRecommenderController {
         effortCalc.effortCalc(eff, project, organization);
         s = formatter.format(new Date());
         System.out.println(s + " | Finished computation of effort from " + organization);
+        System.gc();
         return new ResponseEntity(HttpStatus.CREATED);
     }
 
@@ -133,6 +139,7 @@ public class StakeholdersRecommenderController {
         stakeholdersRecommenderService.undo_recommend_reject(rejected, user, requirement, organization);
         s = formatter.format(new Date());
         System.out.println(s + " | Finished rejection from " + organization);
+        System.gc();
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
 
@@ -147,6 +154,7 @@ public class StakeholdersRecommenderController {
         List<Skill> skills = stakeholdersRecommenderService.getPersonSkills(person, organization, k);
         s = formatter.format(new Date());
         System.out.println(s + " | Finished get person skills from " + organization);
+        System.gc();
         return new ResponseEntity<>(skills, HttpStatus.OK);
     }
 
