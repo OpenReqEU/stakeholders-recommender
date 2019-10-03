@@ -33,6 +33,14 @@ public class ProjectSR implements Serializable {
         this.id = newId;
     }
 
+    public ProjectSR(ProjectSRId projectSRId, Boolean bugzilla, Integer size, List<String> parts, Boolean rake) {
+        this.id=projectSRId;
+        this.bugzilla=bugzilla;
+        this.recSize=size;
+        this.participants=parts;
+        this.rake=rake;
+    }
+
     public ProjectSRId getId() {
         return id;
     }

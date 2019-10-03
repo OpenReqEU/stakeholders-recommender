@@ -53,6 +53,17 @@ public class PersonSR implements Serializable {
 
     }
 
+    public PersonSR(String s, List<Skill> skills, Double hoursDefault, String newId, String organization, List<Skill> components, double v, PersonSRId personSRId) {
+        this.name=s;
+        this.skills=skills;
+        this.hours=hoursDefault;
+        this.projectIdQuery=newId;
+        this.organization=organization;
+        this.components=components;
+        this.availability=v;
+        this.id=personSRId;
+    }
+
     public PersonSRId getId() {
         return id;
     }

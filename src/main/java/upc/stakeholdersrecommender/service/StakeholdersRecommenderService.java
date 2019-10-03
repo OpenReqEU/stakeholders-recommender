@@ -18,6 +18,7 @@ import javax.transaction.Transactional;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static java.lang.Double.max;
 import static java.lang.Math.min;
@@ -369,6 +370,7 @@ public class StakeholdersRecommenderService {
         } else {
             requeriments = request.getRequirements();
         }
+        Date dat=new Date();
         for (Requirement r : requeriments) {
             SimpleDateFormat inFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX");
             Date dtIn = inFormat.parse(r.getModified_at());
@@ -515,15 +517,7 @@ public class StakeholdersRecommenderService {
                 skills = new ArrayList<>();
                 components = new ArrayList<>();
             }
-            PersonSR per = new PersonSR();
-            per.setName(s);
-            per.setSkills(skills);
-            per.setHours(hoursDefault);
-            per.setProjectIdQuery(newId);
-            per.setOrganization(organization);
-            per.setComponents(components);
-            per.setAvailability(1.0);
-            per.setId(new PersonSRId(newId, s, organization));
+            PersonSR per = new PersonSR(s,skills,hoursDefault,newId,organization,components,1.0,new PersonSRId(newId,s,organization));
             toSave.add(per);
         }
         PersonSRRepository.saveAll(toSave);
@@ -582,11 +576,11 @@ public class StakeholdersRecommenderService {
                 else
                     availability = computeAvailability(specifiedReq, personRecs, person, recs, id, hours, organization);
             } else availability = 1.0;
-            PersonSR per = new PersonSR(new PersonSRId(id, person.getPerson(), organization), id, availability, skills, organization);
-            if (part.containsKey(per.getName()) && part.get(per.getName()) != null)
-                per.setHours(part.get(per.getName()));
-            else per.setHours(hoursDefault);
-            per.setComponents(components);
+            Double hours=0.0;
+            if (part.containsKey(person.getPerson()) && part.get(person.getPerson()) != null)
+                hours=part.get(person.getPerson());
+            else hours=hoursDefault;
+            PersonSR per = new PersonSR(person.getPerson(),skills, hours, person.getProject(), organization, components,availability,new PersonSRId(id, person.getPerson(), organization));
             toSave.add(per);
         }
         PersonSRRepository.saveAll(toSave);
@@ -742,15 +736,11 @@ public class StakeholdersRecommenderService {
 
     private String instanciateProject(Project proj, List<Participant> participants, String organization, Boolean rake, Integer size, Boolean bugzilla) {
         String id = proj.getId();
-        ProjectSR projectSRTrad = new ProjectSR(new ProjectSRId(proj.getId(), organization));
         List<String> parts = new ArrayList<>();
         for (Participant par : participants) {
             parts.add(par.getPerson());
         }
-        projectSRTrad.setBugzilla(bugzilla);
-        projectSRTrad.setRecSize(size);
-        projectSRTrad.setParticipants(parts);
-        projectSRTrad.setRake(rake);
+        ProjectSR projectSRTrad = new ProjectSR(new ProjectSRId(proj.getId(), organization),bugzilla,size,parts,rake);
         ProjectRepository.save(projectSRTrad);
         return id;
     }
@@ -808,9 +798,7 @@ public class StakeholdersRecommenderService {
             String id = j.getId();
             proje.setProjectId(id);
             for (RequirementSR req : RequirementSRRepository.findByOrganizationAndProj(organization, id)) {
-                KeywordReturnSchema key = new KeywordReturnSchema();
-                key.setRequirement(req.getId().getRequirementId());
-                key.setSkills(new ArrayList<>(req.getSkillsSet()));
+                KeywordReturnSchema key = new KeywordReturnSchema(req.getId().getRequirementId(),new ArrayList<>(req.getSkillsSet()));
                 reqs.add(key);
             }
             proje.setRequirements(reqs);

@@ -3,6 +3,7 @@ package upc.stakeholdersrecommender.domain.Schemas;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @ApiModel(description = "Class representing a requirement with its keywords.")
@@ -11,6 +12,14 @@ public class KeywordReturnSchema {
     private String requirement;
     @ApiModelProperty(notes = "Set of skills of the requirement.", example = "[ubuntu,UI,linux]", required = true)
     private List<String> skills;
+
+    public KeywordReturnSchema(String requirementId, ArrayList<String> strings) {
+        this.requirement=requirementId;
+        this.skills=strings;
+    }
+
+    public KeywordReturnSchema() {
+    }
 
     public String getRequirement() {
         return requirement;

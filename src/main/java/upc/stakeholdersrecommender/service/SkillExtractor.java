@@ -20,7 +20,13 @@ import static java.lang.Math.min;
 public class SkillExtractor {
 
     @Value("${skill.dropoff.days}")
-    private String dropoffDays;
+    private Double dropoffDays;
+    @Value("${skill.dropoff.max}")
+    private Double maxDropoff;
+    @Value("${skill.dropoff.days.unconsider}")
+    private Double daysToUnconsider;
+
+
     @Autowired
     private KeywordExtractionModelRepository KeywordExtractionModelRepository;
     @Autowired
@@ -78,7 +84,7 @@ public class SkillExtractor {
 
         //Transform the map from (Requirement / KeywordValue) to (Requirement / SkillFactor)
 
-        //Skill factor is a linear function, dropping off lineally up to 0.5, based on the days
+        //Skill factor is a linear function, dropping off lineally up to maxDropoff, based on the days
         //since the requirement was last touched
         HashMap<String, Integer> mod = extractor.getCorpusFrequency();
         KeywordExtractionModel toSave = new KeywordExtractionModel();
@@ -98,7 +104,10 @@ public class SkillExtractor {
             Map<String, Double> aux = allComponents.get(s);
             Map<String, Double> helper = new HashMap<>();
             for (String j : aux.keySet()) {
-                helper.put(j, min(1.0, 1.0 - min(0.5, diffDays * (0.5 / Double.parseDouble(dropoffDays)))));
+                if (daysToUnconsider==-1.0 || daysToUnconsider>=diffDays ) {
+                    if (dropoffDays!=-1.0) helper.put(j, min(1.0, 1.0 - min(maxDropoff, diffDays * (maxDropoff / dropoffDays))));
+                    else helper.put(j,1.0);
+                }
             }
             scaledKeywords.put(s, helper);
         }
