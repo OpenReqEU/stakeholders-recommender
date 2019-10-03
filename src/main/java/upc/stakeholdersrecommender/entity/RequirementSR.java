@@ -67,17 +67,17 @@ public class RequirementSR implements Serializable {
         return skills;
     }
 
-    public Set<String> getSkillsSet() {
-        Set ret=new HashSet<>(skills);
-        return ret;
-    }
-
     public void setSkills(ArrayList<String> skills) {
         this.skills = skills;
     }
 
     public void setSkills(List<String> skills) {
         this.skills = skills;
+    }
+
+    public Set<String> getSkillsSet() {
+        Set ret = new HashSet<>(skills);
+        return ret;
     }
 
     public String getOrganization() {

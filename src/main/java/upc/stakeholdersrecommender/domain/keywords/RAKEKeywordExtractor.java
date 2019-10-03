@@ -15,7 +15,17 @@ import java.util.*;
 public class RAKEKeywordExtractor {
 
     private Double cutoff = 3.0;
-    private TextPreprocessing preprocess=new TextPreprocessing();
+    private TextPreprocessing preprocess = new TextPreprocessing();
+
+    public static List<String> getAnalyzedStrings(String text, Analyzer analyzer, List<String> result) throws IOException {
+        TokenStream tokenStream = analyzer.tokenStream(null, new StringReader(text));
+        CharTermAttribute attr = tokenStream.addAttribute(CharTermAttribute.class);
+        tokenStream.reset();
+        while (tokenStream.incrementToken()) {
+            result.add(attr.toString());
+        }
+        return result;
+    }
 
     public List<Map<String, Double>> extractKeywords(List<String> corpus) throws IOException {
         List<Map<String, Double>> res = new ArrayList<>();
@@ -57,8 +67,7 @@ public class RAKEKeywordExtractor {
         return RAKEanalyze(text);
     }
 
-
-    public Map<String, Map<String, Double>> computeRake(Collection<Requirement> corpus) throws IOException {
+    public Map<String, Map<String, Double>> computeRake(List<Requirement> corpus) throws IOException {
         List<String> docs = new ArrayList<>();
         for (Requirement r : corpus) {
             docs.add(r.getDescription());
@@ -69,7 +78,7 @@ public class RAKEKeywordExtractor {
     }
 
     List<String> RAKEanalyze(String text) throws IOException {
-        text=preprocess.text_preprocess(text);
+        text = preprocess.text_preprocess(text);
         Analyzer analyzer = CustomAnalyzer.builder()
                 .withTokenizer("standard")
                 .addTokenFilter("lowercase")
@@ -91,16 +100,6 @@ public class RAKEKeywordExtractor {
     List<String> analyze(String text, Analyzer analyzer) throws IOException {
         List<String> result = new ArrayList<>();
         return getAnalyzedStrings(text, analyzer, result);
-    }
-
-    public static List<String> getAnalyzedStrings(String text, Analyzer analyzer, List<String> result) throws IOException {
-        TokenStream tokenStream = analyzer.tokenStream(null, new StringReader(text));
-        CharTermAttribute attr = tokenStream.addAttribute(CharTermAttribute.class);
-        tokenStream.reset();
-        while (tokenStream.incrementToken()) {
-            result.add(attr.toString());
-        }
-        return result;
     }
 
 }

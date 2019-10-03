@@ -36,13 +36,13 @@ public class WordEmbedding {
         for (int i = 0; i < help1.length; ++i) {
             sum += help1[i] * help2[i];
         }
-        return sum /(norm(help1)*norm(help2));
+        return sum / (norm(help1) * norm(help2));
     }
 
-    private Double norm (Double[] array) {
-        Double tot=0.0;
-        for (Double d:array) {
-            tot+=d*d;
+    private Double norm(Double[] array) {
+        Double tot = 0.0;
+        for (Double d : array) {
+            tot += d * d;
         }
         return sqrt(tot);
     }

@@ -25,6 +25,8 @@ public class ProjectSR implements Serializable {
 
     private Boolean bugzilla;
 
+    private Double selectivity;
+
     public ProjectSR() {
 
     }
@@ -34,11 +36,11 @@ public class ProjectSR implements Serializable {
     }
 
     public ProjectSR(ProjectSRId projectSRId, Boolean bugzilla, Integer size, List<String> parts, Boolean rake) {
-        this.id=projectSRId;
-        this.bugzilla=bugzilla;
-        this.recSize=size;
-        this.participants=parts;
-        this.rake=rake;
+        this.id = projectSRId;
+        this.bugzilla = bugzilla;
+        this.recSize = size;
+        this.participants = parts;
+        this.rake = rake;
     }
 
     public ProjectSRId getId() {
@@ -87,5 +89,13 @@ public class ProjectSR implements Serializable {
 
     public void setBugzilla(Boolean bugzilla) {
         this.bugzilla = bugzilla;
+    }
+
+    public Double getSelectivity() {
+        return selectivity;
+    }
+
+    public void setSelectivity(Double selectivity) {
+        this.selectivity = selectivity;
     }
 }

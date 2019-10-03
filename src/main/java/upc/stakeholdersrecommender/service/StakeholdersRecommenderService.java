@@ -18,10 +18,8 @@ import javax.transaction.Transactional;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 import static java.lang.Double.max;
-import static java.lang.Math.min;
 
 @Service
 @Transactional
@@ -53,8 +51,9 @@ public class StakeholdersRecommenderService {
     @Autowired
     private SkillExtractor SkillExtractor;
 
-
-
+    public static <E> E[] createArray(int length, E... elements) {
+        return Arrays.copyOf(elements, length);
+    }
 
     public List<RecommendReturnSchema> recommend(RecommendSchema request, int k, Boolean projectSpecific, String organization, Integer test) throws Exception {
         String p = request.getProject().getId();
@@ -76,7 +75,7 @@ public class StakeholdersRecommenderService {
         } else {
             if (!rake) {
                 Integer size = pro.getRecSize();
-                newReq.setSkills(new TFIDFKeywordExtractor().computeTFIDFSingular(requirement, KeywordExtractionModelRepository.getOne(organization).getModel(), size));
+                newReq.setSkills(new TFIDFKeywordExtractor(pro.getSelectivity()).computeTFIDFSingular(requirement, KeywordExtractionModelRepository.getOne(organization).getModel(), size));
             } else newReq.setSkills(new RAKEKeywordExtractor().computeTFIDFSingular(requirement));
         }
         List<String> comps = new ArrayList<>();
@@ -125,7 +124,7 @@ public class StakeholdersRecommenderService {
                 }
             }
         }
-        Pair<PersonSR,Double>[] bestPeople = computeBestStakeholders(clean, req, hours, k, projectSpecific);
+        Pair<PersonSR, Double>[] bestPeople = computeBestStakeholders(clean, req, hours, k, projectSpecific);
         ret = prepareFinal(bestPeople, req);
         return ret;
     }
@@ -147,10 +146,10 @@ public class StakeholdersRecommenderService {
 
     private List<RecommendReturnSchema> prepareFinal(Pair<PersonSR, Double>[] people, RequirementSR req) throws IOException {
         List<RecommendReturnSchema> ret = new ArrayList<>();
-        for (Pair<PersonSR,Double> personPair : people) {
-            Double appropiateness=personPair.getSecond();
-            PersonSR pers=personPair.getFirst();
-            if (appropiateness>0.0) {
+        for (Pair<PersonSR, Double> personPair : people) {
+            Double appropiateness = personPair.getSecond();
+            PersonSR pers = personPair.getFirst();
+            if (appropiateness > 0.0) {
                 PersonMinimal min = new PersonMinimal();
                 min.setUsername(pers.getName());
                 ret.add(new RecommendReturnSchema(new RequirementMinimal(req.getId().getRequirementId()), min, appropiateness, pers.getAvailability()));
@@ -158,29 +157,29 @@ public class StakeholdersRecommenderService {
         }
         Collections.sort(ret,
                 Comparator.comparingDouble(RecommendReturnSchema::getAppropiatenessScore).reversed());
-        if (ret.size()>1) {
+        if (ret.size() > 1) {
             RecommendReturnSchema best = ret.get(0);
             Double percentage = getPercentage(best, people, req);
-            Double conversion=percentage/best.getAppropiatenessScore();
-            for (RecommendReturnSchema recommend:ret) {
-                recommend.setAppropiatenessScore(recommend.getAppropiatenessScore()*conversion);
+            Double conversion = percentage / best.getAppropiatenessScore();
+            for (RecommendReturnSchema recommend : ret) {
+                recommend.setAppropiatenessScore(recommend.getAppropiatenessScore() * conversion);
             }
         }
         return ret;
     }
 
     private Double getPercentage(RecommendReturnSchema best, Pair<PersonSR, Double>[] people, RequirementSR req) throws IOException {
-        Double percentage=0.0;
-        Double intersect=0.0;
-        PersonSR chosen=null;
-        for (Pair<PersonSR,Double> pers:people) {
-            if (pers.getFirst().getName().equals(best.getPerson().getUsername())) chosen=pers.getFirst();
+        Double percentage = 0.0;
+        Double intersect = 0.0;
+        PersonSR chosen = null;
+        for (Pair<PersonSR, Double> pers : people) {
+            if (pers.getFirst().getName().equals(best.getPerson().getUsername())) chosen = pers.getFirst();
         }
-        for (String sk:req.getSkillsSet()) {
-            Double weightToAdd=0.0;
-            for (Skill j:chosen.getSkills()) {
+        for (String sk : req.getSkillsSet()) {
+            Double weightToAdd = 0.0;
+            for (Skill j : chosen.getSkills()) {
                 if (j.getName().equals(sk)) {
-                    weightToAdd=100.0;
+                    weightToAdd = 100.0;
                     ++intersect;
                     break;
                 } else {
@@ -191,16 +190,16 @@ public class StakeholdersRecommenderService {
                 }
             }
             if (weightToAdd != 100.0) {
-                if (weightToAdd!=0.0)
+                if (weightToAdd != 0.0)
                     intersect = intersect + (weightToAdd * 1);
             }
         }
-        percentage=intersect/(double)req.getSkillsSet().size();
+        percentage = intersect / (double) req.getSkillsSet().size();
         return percentage;
     }
 
-    private Pair<PersonSR,Double>[] computeBestStakeholders(List<PersonSR> persList, RequirementSR req, Double hours, int k, Boolean projectSpecific) throws IOException {
-        List<Pair<PersonSR, Pair<Double,Double>>> valuesForSR = new ArrayList<>();
+    private Pair<PersonSR, Double>[] computeBestStakeholders(List<PersonSR> persList, RequirementSR req, Double hours, int k, Boolean projectSpecific) throws IOException {
+        List<Pair<PersonSR, Pair<Double, Double>>> valuesForSR = new ArrayList<>();
 
         for (PersonSR person : persList) {
             Double sum = 0.0;
@@ -223,7 +222,7 @@ public class StakeholdersRecommenderService {
                     }
                 }
                 if (weightToAdd != 100.0) {
-                    if (weightToAdd!=0.0&&mostSimilarSkill!=null)
+                    if (weightToAdd != 0.0 && mostSimilarSkill != null)
                         sum = sum + weightToAdd * mostSimilarSkill.getWeight();
                 }
             }
@@ -247,12 +246,12 @@ public class StakeholdersRecommenderService {
             Double appropiateness = getAppropiateness(req, person, skillTrad);
             res = res * 3 + person.getAvailability() + resComp * 10;
             if ((projectSpecific && person.getAvailability() >= (hours / person.getHours())) && appropiateness != 0.0) {
-                Pair<Double,Double> auxPair=new Pair<>(-res,appropiateness);
-                Pair<PersonSR, Pair<Double,Double>> valuePair = new Pair<>(person,auxPair);
+                Pair<Double, Double> auxPair = new Pair<>(-res, appropiateness);
+                Pair<PersonSR, Pair<Double, Double>> valuePair = new Pair<>(person, auxPair);
                 valuesForSR.add(valuePair);
             } else if (!projectSpecific && appropiateness != 0.0) {
-                Pair<Double,Double> auxPair=new Pair<>(-res,appropiateness);
-                Pair<PersonSR, Pair<Double,Double>> valuePair = new Pair<>(person,auxPair);
+                Pair<Double, Double> auxPair = new Pair<>(-res, appropiateness);
+                Pair<PersonSR, Pair<Double, Double>> valuePair = new Pair<>(person, auxPair);
                 valuesForSR.add(valuePair);
             }
         }
@@ -260,19 +259,17 @@ public class StakeholdersRecommenderService {
         if (k >= valuesForSR.size()) {
             k = valuesForSR.size();
         }
-        Pair<PersonSR,Double>[] out = createArray(k);
+        Pair<PersonSR, Double>[] out = createArray(k);
         for (int i = 0; i < k && i < valuesForSR.size(); ++i) {
-            out[i] = new Pair<>(valuesForSR.get(i).getFirst(),valuesForSR.get(i).getSecond().getSecond());
+            out[i] = new Pair<>(valuesForSR.get(i).getFirst(), valuesForSR.get(i).getSecond().getSecond());
         }
         return out;
     }
 
-
-
     private Double getAppropiateness(RequirementSR req, PersonSR person, Map<String, Skill> skillTrad) throws IOException {
         Set<String> reqSkills = req.getSkillsSet();
         Double total = 0.0;
-        if (person.getSkills()!=null&&person.getSkills().size()>0) {
+        if (person.getSkills() != null && person.getSkills().size() > 0) {
             for (Skill sk : person.getSkills()) {
                 skillTrad.put(sk.getName(), sk);
             }
@@ -280,24 +277,24 @@ public class StakeholdersRecommenderService {
                 Double weightToAdd = 0.0;
                 String mostSimilarWord = "";
                 for (String skill : skillTrad.keySet()) {
-                        if (skill.equals(done)) {
-                            weightToAdd = 100.0;
-                            total = total + skillTrad.get(skill).getWeight();
-                            break;
-                        } else {
-                            Double val = WordEmbedding.computeSimilarity(skill, done);
-                            if (val > weightToAdd) {
-                                weightToAdd = val;
-                                mostSimilarWord = skill;
-                            }
+                    if (skill.equals(done)) {
+                        weightToAdd = 100.0;
+                        total = total + skillTrad.get(skill).getWeight();
+                        break;
+                    } else {
+                        Double val = WordEmbedding.computeSimilarity(skill, done);
+                        if (val > weightToAdd) {
+                            weightToAdd = val;
+                            mostSimilarWord = skill;
                         }
                     }
-                    if (weightToAdd != 100.0) {
-                        if (weightToAdd!=0.0)
+                }
+                if (weightToAdd != 100.0) {
+                    if (weightToAdd != 0.0)
                         total = total + (weightToAdd * skillTrad.get(mostSimilarWord).getWeight());
-                    }
                 }
             }
+        }
         Double amount = (double) req.getSkillsSet().size();
         Double appropiateness;
         if (amount == 0.0) {
@@ -358,24 +355,22 @@ public class StakeholdersRecommenderService {
         }
     }
 
-
-    public Integer addBatch(BatchSchema request, Boolean withAvailability, Boolean withComponent, String organization, Boolean autoMapping, Boolean bugzillaPreprocessing, Boolean logging, Integer test) throws Exception {
+    public Integer addBatch(BatchSchema request, Boolean withAvailability, Boolean withComponent, String organization, Boolean autoMapping, Boolean bugzillaPreprocessing, Boolean logging, Integer test, Double selectivity) throws Exception {
         purgeByOrganization(organization);
         verify(request);
         Map<String, Requirement> recs = new HashMap<>();
         List<Requirement> requeriments;
         if (bugzillaPreprocessing) {
-            requeriments=cleanRequirements(request.getRequirements());
+            requeriments = cleanRequirements(request.getRequirements());
             requeriments = Preprocess.preprocess(requeriments, test);
         } else {
             requeriments = request.getRequirements();
         }
-        Date dat=new Date();
         for (Requirement r : requeriments) {
             SimpleDateFormat inFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX");
             Date dtIn = inFormat.parse(r.getModified_at());
             r.setModified(dtIn);
-            r.setDescription(r.getDescription() + ". " + r.getName());
+            if (r.getName()!=null) r.setDescription(r.getDescription() + " . " + r.getName());
             recs.put(r.getId(), r);
         }
         Map<String, Set<String>> personRecs = getPersonRecs(request);
@@ -386,7 +381,7 @@ public class StakeholdersRecommenderService {
         if (!bugzillaPreprocessing) {
             if (requeriments.size() > 100) rake = false;
             if (rake) allSkills = SkillExtractor.computeAllSkillsRequirementRAKE(recs, organization);
-            else allSkills = SkillExtractor.computeAllSkillsRequirement(recs, organization);
+            else allSkills = SkillExtractor.computeAllSkillsRequirement(recs, organization,selectivity);
         } else {
             allSkills = SkillExtractor.computeAllSkillsNoMethod(recs);
         }
@@ -415,7 +410,7 @@ public class StakeholdersRecommenderService {
         Map<String, Integer> loggingFrequency = null;
 
         if (logging) {
-            pair = RiLogging.getUserLogging(bugzillaPreprocessing, rake, organization, recSize, test);
+            pair = RiLogging.getUserLogging(bugzillaPreprocessing, rake, organization, recSize, test,selectivity);
             loggingFrequency = getSkillFrequency(pair.getFirst());
         }
 
@@ -441,7 +436,7 @@ public class StakeholdersRecommenderService {
             }
             List<Participant> part = new ArrayList<>();
             if (participants.containsKey(proj.getId())) part = participants.get(proj.getId());
-            String id = instanciateProject(proj, part, organization, rake, recSize, bugzillaPreprocessing);
+            String id = instanciateProject(proj, part, organization, rake, recSize, bugzillaPreprocessing,selectivity);
             Map<String, Double> hourMap = new HashMap<>();
             for (Participant par : part) {
                 hourMap.put(par.getPerson(), par.getAvailability());
@@ -458,8 +453,6 @@ public class StakeholdersRecommenderService {
         if (request.getParticipants() != null) particips = request.getParticipants().size();
         return request.getPersons().size() + request.getProjects().size() + request.getRequirements().size() + request.getResponsibles().size() + particips;
     }
-
-
 
     private void verify(BatchSchema request) throws Exception {
         Set<String> rec = new HashSet<>();
@@ -517,7 +510,7 @@ public class StakeholdersRecommenderService {
                 skills = new ArrayList<>();
                 components = new ArrayList<>();
             }
-            PersonSR per = new PersonSR(s,skills,hoursDefault,newId,organization,components,1.0,new PersonSRId(newId,s,organization));
+            PersonSR per = new PersonSR(s, skills, hoursDefault, newId, organization, components, 1.0, new PersonSRId(newId, s, organization));
             toSave.add(per);
         }
         PersonSRRepository.saveAll(toSave);
@@ -536,7 +529,6 @@ public class StakeholdersRecommenderService {
         return SkillExtractor.computeTimeFactor(recs, allComponents, dat);
     }
 
-
     private Map<String, Integer> getSkillFrequency(Map<String, Map<String, Double>> allSkills) {
         Map<String, Integer> skillfrequency = new HashMap<>();
         for (String s : allSkills.keySet()) {
@@ -550,7 +542,6 @@ public class StakeholdersRecommenderService {
         }
         return skillfrequency;
     }
-
 
     private void instanciateResourceBatch(Map<String, Double> part, List<Participant> persons, Map<String, Requirement> recs, Map<String, Map<String, Double>> allSkills, Map<String, Set<String>> personRecs, Map<String, Integer> skillFrequency, List<String> specifiedReq, String id, Boolean withAvailability, Boolean withComponent
             , Map<String, Map<String, Double>> allComponents, Map<String, Integer> componentFrequency, String organization, Pair<Map<String, Map<String, Double>>, Map<String, Map<String, Pair<Integer, Integer>>>> pair, Map<String, Integer> loggingFrequency) throws Exception {
@@ -576,11 +567,11 @@ public class StakeholdersRecommenderService {
                 else
                     availability = computeAvailability(specifiedReq, personRecs, person, recs, id, hours, organization);
             } else availability = 1.0;
-            Double hours=0.0;
+            Double hours = 0.0;
             if (part.containsKey(person.getPerson()) && part.get(person.getPerson()) != null)
-                hours=part.get(person.getPerson());
-            else hours=hoursDefault;
-            PersonSR per = new PersonSR(person.getPerson(),skills, hours, person.getProject(), organization, components,availability,new PersonSRId(id, person.getPerson(), organization));
+                hours = part.get(person.getPerson());
+            else hours = hoursDefault;
+            PersonSR per = new PersonSR(person.getPerson(), skills, hours, person.getProject(), organization, components, availability, new PersonSRId(id, person.getPerson(), organization));
             toSave.add(per);
         }
         PersonSRRepository.saveAll(toSave);
@@ -734,20 +725,17 @@ public class StakeholdersRecommenderService {
         RequirementSRRepository.saveAll(reqs);
     }
 
-    private String instanciateProject(Project proj, List<Participant> participants, String organization, Boolean rake, Integer size, Boolean bugzilla) {
+    private String instanciateProject(Project proj, List<Participant> participants, String organization, Boolean rake, Integer size, Boolean bugzilla, Double selectivity) {
         String id = proj.getId();
         List<String> parts = new ArrayList<>();
         for (Participant par : participants) {
             parts.add(par.getPerson());
         }
-        ProjectSR projectSRTrad = new ProjectSR(new ProjectSRId(proj.getId(), organization),bugzilla,size,parts,rake);
+        ProjectSR projectSRTrad = new ProjectSR(new ProjectSRId(proj.getId(), organization), bugzilla, size, parts, rake);
+        projectSRTrad.setSelectivity(selectivity);
         ProjectRepository.save(projectSRTrad);
         return id;
     }
-
-
-
-
 
     private List<Skill> computeSkillsPerson(Set<String> oldRecs, Map<String, Map<String, Double>> recs, Map<String, Integer> skillsFrequency, Pair<Map<String, Map<String, Double>>, Map<String, Map<String, Pair<Integer, Integer>>>> pair, String s, Map<String, Integer> loggingFrequency) throws JsonProcessingException {
         return getSkills(oldRecs, recs, skillsFrequency, pair, s, loggingFrequency);
@@ -798,7 +786,7 @@ public class StakeholdersRecommenderService {
             String id = j.getId();
             proje.setProjectId(id);
             for (RequirementSR req : RequirementSRRepository.findByOrganizationAndProj(organization, id)) {
-                KeywordReturnSchema key = new KeywordReturnSchema(req.getId().getRequirementId(),new ArrayList<>(req.getSkillsSet()));
+                KeywordReturnSchema key = new KeywordReturnSchema(req.getId().getRequirementId(), new ArrayList<>(req.getSkillsSet()));
                 reqs.add(key);
             }
             proje.setRequirements(reqs);
@@ -835,6 +823,17 @@ public class StakeholdersRecommenderService {
         } else return null;
     }
 
+    public List<Requirement> cleanRequirements(List<Requirement> requirements) throws IOException {
+        List<Requirement> toRet = new ArrayList<>();
+        for (Requirement r : requirements) {
+            if (r.getDescription() != null)
+                r.setDescription(pre.text_preprocess(r.getDescription()));
+            if (r.getName() != null)
+                r.setName(pre.text_preprocess(r.getName()));
+            toRet.add(r);
+        }
+        return toRet;
+    }
 
     private class SinglePair<T> {
         T p1, p2;
@@ -844,22 +843,6 @@ public class StakeholdersRecommenderService {
             this.p2 = p2;
         }
 
-    }
-
-
-    public List<Requirement> cleanRequirements(List<Requirement> requirements) throws IOException {
-        List<Requirement> toRet=new ArrayList<>();
-        for (Requirement r:requirements) {
-            if (r.getDescription()!=null)
-            r.setDescription(pre.text_preprocess(r.getDescription()));
-            if (r.getName()!=null)
-            r.setName(pre.text_preprocess(r.getName()));
-            toRet.add(r);
-        }
-        return toRet;
-    }
-    public static <E> E[] createArray(int length, E... elements) {
-        return Arrays.copyOf(elements, length);
     }
 
 }

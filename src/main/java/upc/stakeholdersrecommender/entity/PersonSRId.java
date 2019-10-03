@@ -31,16 +31,16 @@ public class PersonSRId implements Serializable {
         return personId;
     }
 
+    public void setPersonId(String personId) {
+        this.personId = personId;
+    }
+
     public String getProjectId() {
         return projectId;
     }
 
     public void setProjectId(String projectId) {
         this.projectId = projectId;
-    }
-
-    public void setPersonId(String personId) {
-        this.personId = personId;
     }
 
     public String getOrganizationId() {

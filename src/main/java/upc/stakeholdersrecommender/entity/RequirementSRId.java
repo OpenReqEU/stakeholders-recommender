@@ -34,10 +34,6 @@ public class RequirementSRId implements Serializable {
         this.projectId = projectId;
     }
 
-    public void setRequirementId(String requirementId) {
-        this.requirementId = requirementId;
-    }
-
     public String getOrganizationId() {
         return organizationId;
     }
@@ -52,6 +48,10 @@ public class RequirementSRId implements Serializable {
 
     public String getRequirementId() {
         return requirementId;
+    }
+
+    public void setRequirementId(String requirementId) {
+        this.requirementId = requirementId;
     }
 
     @Override

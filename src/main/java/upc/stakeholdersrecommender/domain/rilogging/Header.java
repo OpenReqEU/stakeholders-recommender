@@ -4,10 +4,10 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Header {
+    private String Sessionid;
+
     public Header() {
     }
-
-    private String Sessionid;
 
     public String getSessionid() {
         return Sessionid;

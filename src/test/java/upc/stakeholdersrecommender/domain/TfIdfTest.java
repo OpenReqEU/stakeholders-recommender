@@ -23,7 +23,7 @@ public class TfIdfTest {
 
     @Test
     public void computeTFIDFTest() throws IOException {
-        TFIDFKeywordExtractor keywordExtractor=new TFIDFKeywordExtractor();
+        TFIDFKeywordExtractor keywordExtractor=new TFIDFKeywordExtractor(-1.0);
         String object="[{\"id\":\"509913\",\"effort\":1.0,\"requirementParts\":[{\"id\":\"1\",\"name\":\"UI\"}],\"name\":null,\"description\":\"PropertyEditingSupport does not check if IPropertySource is null\",\"modified_at\":\"2017-01-04T09:58:57Z\"}," +
                 "{\"id\":\"509920\",\"effort\":1.0,\"requirementParts\":[{\"id\":\"1\",\"name\":\"UI\"}],\"name\":null,\"description\":\"[Platform] Save As with a E4 Part\",\"modified_at\":\"2017-01-04T11:30:00Z\"}," +
                 "{\"id\":\"510041\",\"effort\":1.0,\"requirementParts\":[{\"id\":\"1\",\"name\":\"UI\"}],\"name\":null,\"description\":\"No (quick menu) key binding shown for menuContribution/menu/@commandId\",\"modified_at\":\"2017-01-19T03:50:02Z\"}," +
@@ -45,7 +45,7 @@ public class TfIdfTest {
 
     @Test
     public void computeTFIDFSingular() throws IOException {
-        TFIDFKeywordExtractor keywordExtractor=new TFIDFKeywordExtractor();
+        TFIDFKeywordExtractor keywordExtractor=new TFIDFKeywordExtractor(-1.0);
         String object="[{\"id\":\"509913\",\"effort\":1.0,\"requirementParts\":[{\"id\":\"1\",\"name\":\"UI\"}],\"name\":null,\"description\":\"PropertyEditingSupport does not check if IPropertySource is null\",\"modified_at\":\"2017-01-04T09:58:57Z\"}," +
                 "{\"id\":\"509920\",\"effort\":1.0,\"requirementParts\":[{\"id\":\"1\",\"name\":\"UI\"}],\"name\":null,\"description\":\"[Platform] Save As with a E4 Part\",\"modified_at\":\"2017-01-04T11:30:00Z\"}," +
                 "{\"id\":\"510041\",\"effort\":1.0,\"requirementParts\":[{\"id\":\"1\",\"name\":\"UI\"}],\"name\":null,\"description\":\"No (quick menu) key binding shown for menuContribution/menu/@commandId\",\"modified_at\":\"2017-01-19T03:50:02Z\"}," +
@@ -75,7 +75,7 @@ public class TfIdfTest {
 
     @Test
     public void computeTFIDFExtra() throws IOException {
-        TFIDFKeywordExtractor keywordExtractor=new TFIDFKeywordExtractor();
+        TFIDFKeywordExtractor keywordExtractor=new TFIDFKeywordExtractor(-1.0);
         String object="[{\"id\":\"509913\",\"effort\":1.0,\"requirementParts\":[{\"id\":\"1\",\"name\":\"UI\"}],\"name\":null,\"description\":\"PropertyEditingSupport does not check if IPropertySource is null\",\"modified_at\":\"2017-01-04T09:58:57Z\"}," +
                 "{\"id\":\"509920\",\"effort\":1.0,\"requirementParts\":[{\"id\":\"1\",\"name\":\"UI\"}],\"name\":null,\"description\":\"[Platform] Save As with a E4 Part\",\"modified_at\":\"2017-01-04T11:30:00Z\"}," +
                 "{\"id\":\"510041\",\"effort\":1.0,\"requirementParts\":[{\"id\":\"1\",\"name\":\"UI\"}],\"name\":null,\"description\":\"No (quick menu) key binding shown for menuContribution/menu/@commandId\",\"modified_at\":\"2017-01-19T03:50:02Z\"}," +

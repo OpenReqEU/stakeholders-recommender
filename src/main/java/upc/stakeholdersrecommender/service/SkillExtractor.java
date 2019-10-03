@@ -32,10 +32,10 @@ public class SkillExtractor {
     @Autowired
     private PreprocessService Preprocess;
 
-    public Map<String, Map<String, Double>> obtainSkills(Map<String, Requirement> trueRecs, Boolean bugzilla, Boolean rake, String organization, Integer size, Integer test) throws IOException {
+    public Map<String, Map<String, Double>> obtainSkills(Map<String, Requirement> trueRecs, Boolean bugzilla, Boolean rake, String organization, Integer size, Integer test,Double selectivity) throws IOException {
         Map<String, Map<String, Double>> map;
         if (rake) {
-            map = new RAKEKeywordExtractor().computeRake(trueRecs.values());
+            map = new RAKEKeywordExtractor().computeRake(new ArrayList<>(trueRecs.values()));
         } else if (bugzilla) {
             Collection<Requirement> col = trueRecs.values();
             List<Requirement> toMakeSkill = Preprocess.preprocess(new ArrayList<>(col), test);
@@ -45,7 +45,7 @@ public class SkillExtractor {
             map = computeAllSkillsNoMethod(trueRecs);
         } else {
             Map<String, Integer> model = KeywordExtractionModelRepository.getOne(organization).getModel();
-            map = new TFIDFKeywordExtractor().computeTFIDFExtra(model, size, trueRecs);
+            map = new TFIDFKeywordExtractor(selectivity).computeTFIDFExtra(model, size, trueRecs);
             KeywordExtractionModel mod = new KeywordExtractionModel();
             mod.setId(organization);
             mod.setModel(model);
@@ -53,14 +53,15 @@ public class SkillExtractor {
         }
         return map;
     }
+
     public Map<String, Map<String, Double>> computeAllSkillsNoMethod(Map<String, Requirement> recs) {
         Map<String, Map<String, Double>> ret = new HashMap<>();
         for (String s : recs.keySet()) {
             Requirement r = recs.get(s);
             Set<String> helper = new HashSet<>();
             for (String h : r.getDescription().split(" ")) {
-                h=h.replace(".","");
-                if (!h.equals("")&&h.length()>1)
+                h = h.replace(".", "");
+                if (!h.equals("") && h.length() > 1)
                     helper.add(h);
             }
             Map<String, Double> aux = new HashMap<>();
@@ -69,19 +70,19 @@ public class SkillExtractor {
             }
             ret.put(s, aux);
         }
-        return  computeTimeFactor(recs,ret,new Date());
+        return computeTimeFactor(recs, ret, new Date());
     }
+
     public Map<String, Map<String, Double>> computeTime(Map<String, Map<String, Double>> skills, Map<String, Requirement> trueRecs) {
         skills = computeTimeFactor(trueRecs, skills, new Date());
         return skills;
     }
 
-    public Map<String, Map<String, Double>> computeAllSkillsRequirement(Map<String, Requirement> recs, String organization) throws IOException {
-        TFIDFKeywordExtractor extractor = new TFIDFKeywordExtractor();
+    public Map<String, Map<String, Double>> computeAllSkillsRequirement(Map<String, Requirement> recs, String organization,Double selectivity) throws IOException {
+        TFIDFKeywordExtractor extractor = new TFIDFKeywordExtractor(selectivity);
         //Extract map with (Requirement / KeywordValue)
-        Map<String, Map<String, Double>> keywords = extractor.computeTFIDF(recs.values());
+        Map<String, Map<String, Double>> keywords = extractor.computeTFIDF(new ArrayList<>(recs.values()));
         Date dat = new Date();
-
         //Transform the map from (Requirement / KeywordValue) to (Requirement / SkillFactor)
 
         //Skill factor is a linear function, dropping off lineally up to maxDropoff, based on the days
@@ -104,9 +105,10 @@ public class SkillExtractor {
             Map<String, Double> aux = allComponents.get(s);
             Map<String, Double> helper = new HashMap<>();
             for (String j : aux.keySet()) {
-                if (daysToUnconsider==-1.0 || daysToUnconsider>=diffDays ) {
-                    if (dropoffDays!=-1.0) helper.put(j, min(1.0, 1.0 - min(maxDropoff, diffDays * (maxDropoff / dropoffDays))));
-                    else helper.put(j,1.0);
+                if (daysToUnconsider == -1.0 || daysToUnconsider >= diffDays) {
+                    if (dropoffDays != -1.0)
+                        helper.put(j, min(1.0, 1.0 - min(maxDropoff, diffDays * (maxDropoff / dropoffDays))));
+                    else helper.put(j, 1.0);
                 }
             }
             scaledKeywords.put(s, helper);
@@ -116,7 +118,7 @@ public class SkillExtractor {
 
     public Map<String, Map<String, Double>> computeAllSkillsRequirementRAKE(Map<String, Requirement> recs, String organization) throws IOException {
         //Extract map with (Requirement / KeywordValue)
-        Map<String, Map<String, Double>> keywords = new RAKEKeywordExtractor().computeRake(recs.values());
+        Map<String, Map<String, Double>> keywords = new RAKEKeywordExtractor().computeRake(new ArrayList<>(recs.values()));
         Date dat = new Date();
 
         //Transform the map from (Requirement / KeywordValue) to (Requirement / SkillFactor)

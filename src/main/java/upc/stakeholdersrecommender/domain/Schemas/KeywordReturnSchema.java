@@ -14,8 +14,8 @@ public class KeywordReturnSchema {
     private List<String> skills;
 
     public KeywordReturnSchema(String requirementId, ArrayList<String> strings) {
-        this.requirement=requirementId;
-        this.skills=strings;
+        this.requirement = requirementId;
+        this.skills = strings;
     }
 
     public KeywordReturnSchema() {

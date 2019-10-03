@@ -22,17 +22,17 @@ public class RejectedPerson implements Serializable {
     public RejectedPerson() {
     }
 
+    public RejectedPerson(RejectedPersonId user) {
+        this.user = user;
+        this.organization = user.getOrganizationId();
+    }
+
     public String getOrganization() {
         return organization;
     }
 
     public void setOrganization(String organization) {
         this.organization = organization;
-    }
-
-    public RejectedPerson(RejectedPersonId user) {
-        this.user = user;
-        this.organization = user.getOrganizationId();
     }
 
     public RejectedPersonId getUser() {

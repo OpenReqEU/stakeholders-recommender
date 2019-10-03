@@ -33,8 +33,7 @@ public class PreprocessService {
                 if (r.getName() != null) {
                     text = r.getName();
                     req.setTitle(text);
-                }
-                else req.setTitle("");
+                } else req.setTitle("");
                 aux.add(req);
             }
             toSend.setRequirements(aux);
@@ -71,8 +70,7 @@ public class PreprocessService {
         if (requirement.getName() != null) {
             text = requirement.getName();
             req.setTitle(text);
-        }
-        else req.setTitle("");
+        } else req.setTitle("");
         aux.add(req);
         toSend.setRequirements(aux);
         RestTemplate temp = new RestTemplate();

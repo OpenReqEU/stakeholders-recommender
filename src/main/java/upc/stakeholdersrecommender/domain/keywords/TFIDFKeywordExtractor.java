@@ -1,23 +1,33 @@
 package upc.stakeholdersrecommender.domain.keywords;
 
-import edu.stanford.nlp.util.ArraySet;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.custom.CustomAnalyzer;
 import upc.stakeholdersrecommender.domain.Requirement;
 import upc.stakeholdersrecommender.domain.TextPreprocessing;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
 
 
 public class TFIDFKeywordExtractor {
 
-    private Double cutoffParameter = 4.0; //This can be set to different values for different selectivity (more or less keywords)
+    private Double cutoffParameter; //This can be set to different values for different selectivity (more or less keywords)
     private HashMap<String, Integer> corpusFrequency = new HashMap<>();
-    private TextPreprocessing text_preprocess=new TextPreprocessing();
+    private TextPreprocessing text_preprocess = new TextPreprocessing();
+
+    public TFIDFKeywordExtractor(Double cutoff){
+        if (cutoff==-1.0) cutoffParameter=4.0;
+        else cutoffParameter=cutoff;
+    }
+
+    static Map<String, Map<String, Double>> getStringMapMap(List<Requirement> corpus, List<Map<String, Double>> res, int counter) {
+        Map<String, Map<String, Double>> ret = new HashMap<>();
+        for (Requirement r : corpus) {
+            ret.put(r.getId(), res.get(counter));
+            counter++;
+        }
+        return ret;
+    }
 
     private Map<String, Integer> tf(List<String> doc) {
         Map<String, Integer> frequency = new HashMap<>();
@@ -33,11 +43,9 @@ public class TFIDFKeywordExtractor {
         return frequency;
     }
 
-
     private double idf(Integer size, Integer frequency) {
         return Math.log(size.doubleValue() / frequency.doubleValue() + 1.0);
     }
-
 
     private List<String> analyze(String text, Analyzer analyzer) throws IOException {
         List<String> result = new ArrayList<>();
@@ -55,7 +63,7 @@ public class TFIDFKeywordExtractor {
         return analyze(text, analyzer);
     }
 
-    public Map<String, Map<String, Double>> computeTFIDF(Collection<Requirement> corpus) throws IOException {
+    public Map<String, Map<String, Double>> computeTFIDF(List<Requirement> corpus) throws IOException {
         List<List<String>> docs = new ArrayList<>();
         for (Requirement r : corpus) {
             docs.add(englishAnalyze(r.getDescription()));
@@ -64,16 +72,6 @@ public class TFIDFKeywordExtractor {
         int counter = 0;
         return getStringMapMap(corpus, res, counter);
 
-    }
-
-
-    static Map<String, Map<String, Double>> getStringMapMap(Collection<Requirement> corpus, List<Map<String, Double>> res, int counter) {
-        Map<String, Map<String, Double>> ret = new HashMap<>();
-        for (Requirement r : corpus) {
-            ret.put(r.getId(), res.get(counter));
-            counter++;
-        }
-        return ret;
     }
 
     public List<String> computeTFIDFSingular(Requirement req, Map<String, Integer> model, Integer corpusSize) throws IOException {
@@ -128,7 +126,9 @@ public class TFIDFKeywordExtractor {
                 Double idf = idf(docs.size(), corpusFrequency.get(s));
                 Integer tf = wordBag.get(i).get(s);
                 Double tfidf = idf * tf;
-                if (tfidf >= cutoffParameter && s.length() > 1) aux.put(s, tfidf);
+                if (tfidf >= cutoffParameter && s.length() > 1) {
+                    aux.put(s, tfidf);
+                }
             }
             tfidfComputed.add(aux);
             ++i;
@@ -138,7 +138,7 @@ public class TFIDFKeywordExtractor {
     }
 
     private String clean_text(String text) throws IOException {
-        text= text_preprocess.text_preprocess(text);
+        text = text_preprocess.text_preprocess(text);
         String result = "";
         if (text.contains("[")) {
             String[] p = text.split("]\\[");
@@ -192,7 +192,6 @@ public class TFIDFKeywordExtractor {
     public void setCutoffParameter(Double cutoffParameter) {
         this.cutoffParameter = cutoffParameter;
     }
-
 
 
 }

@@ -26,7 +26,9 @@ import java.util.List;
 @RequestMapping("/upc/stakeholders-recommender")
 @Api(value = "Stakeholders Recommender API", produces = MediaType.APPLICATION_JSON_VALUE)
 public class StakeholdersRecommenderController {
-    
+
+    // Treure bug
+
     @Autowired
     StakeholdersRecommenderService stakeholdersRecommenderService;
     @Autowired
@@ -41,7 +43,8 @@ public class StakeholdersRecommenderController {
                                    @RequestParam String organization, @ApiParam(value = "If auto-mapping is used (i.e., set to true), it is not necessary to set or compute effort (i.e., to establish the mappint from effort points to hours). The mapping used in auto-mapping is a 1 to 1 mapping of effort to hours.", example = "true", required = true)
                                    @RequestParam Boolean autoMapping, @ApiParam(value = "If set to true, the endpoint returns each requirement with its set of keywords.", example = "true", required = true)
                                    @RequestParam Boolean keywords, @ApiParam(value = "Whether bugzilla preprocessing is used", example = "true", required = false) @RequestParam(value = "keywordPreprocessing", defaultValue = "false", required = false) Boolean bugzilla,
-                                   @ApiParam(value = "Whether OpenReq Live logging is taken into account", example = "false", required = false) @RequestParam(value = "logging", defaultValue = "false", required = false) Boolean logging) throws Exception {
+                                   @ApiParam(value = "Whether OpenReq Live logging is taken into account", example = "false", required = false) @RequestParam(value = "logging", defaultValue = "false", required = false) Boolean logging,
+                                   @ApiParam(value = "Keyword selectivity factor, higher means less, only used if more than 100 requirements, and no specific keyword tool is specified", example = "3", required = false) @RequestParam(value = "selectivityFactor", defaultValue = "-1", required = false) Double selectivity) throws Exception {
 
 
         Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
@@ -49,7 +52,7 @@ public class StakeholdersRecommenderController {
         System.out.println(s + " | Starting batch process from " + organization);
         int res = 0;
         try {
-            res = stakeholdersRecommenderService.addBatch(batch, withAvailability, withComponent, organization, autoMapping, bugzilla, logging, 0);
+            res = stakeholdersRecommenderService.addBatch(batch, withAvailability, withComponent, organization, autoMapping, bugzilla, logging, 0,selectivity);
         } catch (IOException e) {
             s = formatter.format(new Date());
             System.out.println(s + " | Finished batch process " + organization);

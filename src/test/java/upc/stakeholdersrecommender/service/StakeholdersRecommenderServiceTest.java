@@ -304,7 +304,7 @@ public class StakeholdersRecommenderServiceTest {
                 "    \t";
         BatchSchema bat = mapper.readValue(jsonInString, BatchSchema.class);
         String organization = "UPC";
-        Integer result = instance.addBatch(bat, false, false, organization, false, false, false,1);
+        Integer result = instance.addBatch(bat, false, false, organization, false, false, false,1, -1.0);
         Integer expected = 5;
         assertEquals(result, expected);
     }
@@ -357,7 +357,7 @@ public class StakeholdersRecommenderServiceTest {
                 "    \t";
         BatchSchema bat = mapper.readValue(jsonInString, BatchSchema.class);
         String organization = "UPC";
-        Integer result = instance.addBatch(bat, true, false, organization, true, false, false,1);
+        Integer result = instance.addBatch(bat, true, false, organization, true, false, false,1, -1.0);
         Integer expected = 5;
         assertEquals(result, expected);
     }
@@ -410,7 +410,7 @@ public class StakeholdersRecommenderServiceTest {
                 "    \t";
         BatchSchema bat = mapper.readValue(jsonInString, BatchSchema.class);
         String organization = "UPC";
-        Integer result = instance.addBatch(bat, true, true, organization, true, false, false,1);
+        Integer result = instance.addBatch(bat, true, true, organization, true, false, false,1, -1.0);
         Integer expected = 5;
         assertEquals(result, expected);
     }
@@ -423,7 +423,7 @@ public class StakeholdersRecommenderServiceTest {
         String jsonInString= FileUtils.readFileToString(file, StandardCharsets.US_ASCII);
         BatchSchema bat = mapper.readValue(jsonInString, BatchSchema.class);
         String organization = "UPC";
-        Integer result = instance.addBatch(bat, true, true, organization, true, true, true,2);
+        Integer result = instance.addBatch(bat, true, true, organization, true, true, true,2, -1.0);
         Integer expected = 22213;
         assertEquals(result, expected);
     }
@@ -436,7 +436,7 @@ public class StakeholdersRecommenderServiceTest {
         String jsonInString= FileUtils.readFileToString(file, StandardCharsets.US_ASCII);
         BatchSchema bat = mapper.readValue(jsonInString, BatchSchema.class);
         String organization = "UPC";
-        Integer result = instance.addBatch(bat, true, true, organization, true, false, true,1);
+        Integer result = instance.addBatch(bat, true, true, organization, true, false, true,1, -1.0);
         Integer expected = 22213;
         assertEquals(result, expected);
     }
@@ -454,7 +454,7 @@ public class StakeholdersRecommenderServiceTest {
         int k = 10;
         List<RecommendReturnSchema> result = instance.recommend(req, k, true, "UPC",1);
         String res = mapper.writeValueAsString(result);
-        String s="[{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"22\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.9049269898249501},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"1\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.850930547652002},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"254\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.786627404925508},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"89\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.5716151704339995},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"250\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.40895714390292853},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"2\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.40287690121543335},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"193\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.384119648896422},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"15\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.3635126172626096},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"245\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.35010464351057746},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"83\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.3462136082947244}]\n";
+        String s="[{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"89\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.39777835827442387},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"22\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.32064518871630715},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"44\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.311262248682935},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"1\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.3021315378298072},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"254\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.28160147147660797},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"250\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.14532935155700435},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"2\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.14286410331424185},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"193\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.13736146632443919},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"15\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.12989853520667025},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"245\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.12519767561428677}]\n";
         Double dist=(double) distance(s,res);
         Double percentage =dist/res.length();
         System.out.println(res);
@@ -490,7 +490,7 @@ public class StakeholdersRecommenderServiceTest {
         String jsonInString= FileUtils.readFileToString(file, StandardCharsets.US_ASCII);
         BatchSchema bat = mapper.readValue(jsonInString, BatchSchema.class);
         String organization = "UPC";
-        instance.addBatch(bat, true, true, organization, true, true, false,2);
+        instance.addBatch(bat, true, true, organization, true, true, false,2, -1.0);
         file = new File("src/main/resources/testingFiles/RecommendTest.txt");
         jsonInString= FileUtils.readFileToString(file, StandardCharsets.US_ASCII);
         req = mapper.readValue(jsonInString, RecommendSchema.class);
@@ -573,7 +573,7 @@ public class StakeholdersRecommenderServiceTest {
                 "    \t";
         BatchSchema bat = mapper.readValue(jsonInString, BatchSchema.class);
         String organization = "UPC";
-        Integer result = instance.addBatch(bat, true, true, organization, true, false, false,0);
+        Integer result = instance.addBatch(bat, true, true, organization, true, false, false,0, -1.0);
         Integer expected = 5;
         assertEquals(result, expected);
         List<ProjectKeywordSchema> res = instance.extractKeywords("UPC", bat);
