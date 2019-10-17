@@ -12,6 +12,7 @@ import upc.stakeholdersrecommender.repository.KeywordExtractionModelRepository;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.Math.min;
@@ -78,7 +79,7 @@ public class SkillExtractor {
         return skills;
     }
 
-    public Map<String, Map<String, Double>> computeAllSkillsRequirement(Map<String, Requirement> recs, String organization,Double selectivity) throws IOException {
+    public Map<String, Map<String, Double>> computeAllSkillsRequirement(Map<String, Requirement> recs, String organization,Double selectivity) throws IOException, ExecutionException, InterruptedException {
         TFIDFKeywordExtractor extractor = new TFIDFKeywordExtractor(selectivity);
         //Extract map with (Requirement / KeywordValue)
         Map<String, Map<String, Double>> keywords = extractor.computeTFIDF(new ArrayList<>(recs.values()));

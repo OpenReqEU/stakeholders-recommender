@@ -7,6 +7,10 @@ import upc.stakeholdersrecommender.domain.TextPreprocessing;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
+import com.landawn.abacus.util.stream.IntStream;
 
 
 public class TFIDFKeywordExtractor {
@@ -15,9 +19,9 @@ public class TFIDFKeywordExtractor {
     private HashMap<String, Integer> corpusFrequency = new HashMap<>();
     private TextPreprocessing text_preprocess = new TextPreprocessing();
 
-    public TFIDFKeywordExtractor(Double cutoff){
-        if (cutoff==-1.0) cutoffParameter=4.0;
-        else cutoffParameter=cutoff;
+    public TFIDFKeywordExtractor(Double cutoff) {
+        if (cutoff == -1.0) cutoffParameter = 4.0;
+        else cutoffParameter = cutoff;
     }
 
     static Map<String, Map<String, Double>> getStringMapMap(List<Requirement> corpus, List<Map<String, Double>> res, int counter) {
@@ -63,12 +67,28 @@ public class TFIDFKeywordExtractor {
         return analyze(text, analyzer);
     }
 
-    public Map<String, Map<String, Double>> computeTFIDF(List<Requirement> corpus) throws IOException {
-        List<List<String>> docs = new ArrayList<>();
-        for (Requirement r : corpus) {
-            docs.add(englishAnalyze(r.getDescription()));
+    public Map<String, Map<String, Double>> computeTFIDF(List<Requirement> corpus) throws IOException, ExecutionException, InterruptedException {
+        ConcurrentHashMap<Integer,List<String>> concurrentMap=new ConcurrentHashMap<>();
+        ForkJoinPool forkJoinPool = new ForkJoinPool(4);
+
+        forkJoinPool.submit(() ->
+                IntStream.range(0, corpus.size())
+                .parallel().forEach(i -> {
+            Requirement r= corpus.get(i);
+            List<String> s = new ArrayList<>();
+            try {
+                s = englishAnalyze(r.getDescription());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            concurrentMap.put(i,s);
+
+        })).get();
+        List<List<String>> trueDocs = new ArrayList<>();
+        for (int i = 0; i < concurrentMap.keySet().size(); ++i) {
+            trueDocs.add(concurrentMap.get(i));
         }
-        List<Map<String, Double>> res = tfIdf(docs);
+        List<Map<String, Double>> res = tfIdf(trueDocs);
         int counter = 0;
         return getStringMapMap(corpus, res, counter);
 
@@ -113,15 +133,20 @@ public class TFIDFKeywordExtractor {
     }
 
 
-    private List<Map<String, Double>> tfIdf(List<List<String>> docs) {
+    private List<Map<String, Double>> tfIdf(List<List<String>> docs) throws ExecutionException, InterruptedException {
         List<Map<String, Double>> tfidfComputed = new ArrayList<>();
         List<Map<String, Integer>> wordBag = new ArrayList<>();
+        ConcurrentHashMap<Integer,Map<String, Double>> concurrentMap=new ConcurrentHashMap<>();
         for (List<String> doc : docs) {
             wordBag.add(tf(doc));
         }
-        int i = 0;
-        for (List<String> doc : docs) {
+        ForkJoinPool forkJoinPool = new ForkJoinPool(4);
+
+        forkJoinPool.submit(() ->
+                IntStream.range(0, docs.size())
+                .parallel().forEach(i -> {
             HashMap<String, Double> aux = new HashMap<>();
+            List<String> doc = docs.get(i);
             for (String s : doc) {
                 Double idf = idf(docs.size(), corpusFrequency.get(s));
                 Integer tf = wordBag.get(i).get(s);
@@ -130,8 +155,11 @@ public class TFIDFKeywordExtractor {
                     aux.put(s, tfidf);
                 }
             }
-            tfidfComputed.add(aux);
+            concurrentMap.put(i,aux);
             ++i;
+        })).get();
+        for (int i=0;i<concurrentMap.keySet().size();++i) {
+            tfidfComputed.add(concurrentMap.get(i));
         }
         return tfidfComputed;
 
@@ -143,6 +171,7 @@ public class TFIDFKeywordExtractor {
         if (text.contains("[")) {
             String[] p = text.split("]\\[");
             for (String f : p) {
+                if (f!=null&&f.length()>0) {
                 if (f.charAt(0) != '[') f = "[" + f;
                 if (f.charAt(f.length() - 1) != ']') f = f.concat("]");
                 String[] thing = f.split("\\[");
@@ -159,6 +188,7 @@ public class TFIDFKeywordExtractor {
                         }
                     }
                 }
+            }
             }
         }
         String[] aux4 = text.split("]");

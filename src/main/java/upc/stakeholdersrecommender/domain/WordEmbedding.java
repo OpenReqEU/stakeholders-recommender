@@ -9,20 +9,25 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static java.lang.Math.sqrt;
 
 @Service
 public class WordEmbedding {
 
-    Map<String, Double[]> model = null;
+    ConcurrentHashMap<String, Double[]> model = loadPureModel();
+
+    public WordEmbedding() throws IOException {
+    }
+
+    private ConcurrentHashMap<String, Double[]> loadPureModel() throws IOException {
+        Path p = Paths.get("GloVe_model/glove.6B.50d.txt");
+        String h = new String(Files.readAllBytes(p));
+        return loadModel(h);
+    }
 
     public Double computeSimilarity(String a, String b) throws IOException {
-        if (model == null) {
-            Path p = Paths.get("GloVe_model/glove.6B.50d.txt");
-            String h = new String(Files.readAllBytes(p));
-            loadModel(h);
-        }
         Double[] help1 = null, help2 = null;
         if (model.containsKey(a)) help1 = model.get(a);
         if (model.containsKey(b)) help2 = model.get(b);
@@ -47,8 +52,8 @@ public class WordEmbedding {
         return sqrt(tot);
     }
 
-    private void loadModel(String h) {
-        Map<String, Double[]> map = new HashMap<>();
+    private ConcurrentHashMap<String, Double[]> loadModel(String h) {
+        ConcurrentHashMap<String, Double[]> map = new ConcurrentHashMap<>();
         String[] help = h.split("\n");
         for (String a : help) {
             String[] l = a.split(" ");
@@ -58,7 +63,7 @@ public class WordEmbedding {
             }
             map.put(l[0], aux);
         }
-        model = map;
+        return map;
     }
 
 }

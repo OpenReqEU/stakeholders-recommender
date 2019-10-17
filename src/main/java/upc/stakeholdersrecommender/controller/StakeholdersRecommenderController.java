@@ -27,8 +27,6 @@ import java.util.List;
 @Api(value = "Stakeholders Recommender API", produces = MediaType.APPLICATION_JSON_VALUE)
 public class StakeholdersRecommenderController {
 
-    // Treure bug
-
     @Autowired
     StakeholdersRecommenderService stakeholdersRecommenderService;
     @Autowired
@@ -50,6 +48,7 @@ public class StakeholdersRecommenderController {
         Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         String s = formatter.format(new Date());
         System.out.println(s + " | Starting batch process from " + organization);
+        System.out.println(batch.getRequirements().size());
         int res = 0;
         try {
             res = stakeholdersRecommenderService.addBatch(batch, withAvailability, withComponent, organization, autoMapping, bugzilla, logging, 0,selectivity);

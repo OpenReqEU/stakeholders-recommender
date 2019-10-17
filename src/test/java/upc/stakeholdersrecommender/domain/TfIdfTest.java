@@ -12,6 +12,7 @@ import upc.stakeholdersrecommender.domain.keywords.TFIDFKeywordExtractor;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -22,7 +23,7 @@ public class TfIdfTest {
 
 
     @Test
-    public void computeTFIDFTest() throws IOException {
+    public void computeTFIDFTest() throws IOException, ExecutionException, InterruptedException {
         TFIDFKeywordExtractor keywordExtractor=new TFIDFKeywordExtractor(-1.0);
         String object="[{\"id\":\"509913\",\"effort\":1.0,\"requirementParts\":[{\"id\":\"1\",\"name\":\"UI\"}],\"name\":null,\"description\":\"PropertyEditingSupport does not check if IPropertySource is null\",\"modified_at\":\"2017-01-04T09:58:57Z\"}," +
                 "{\"id\":\"509920\",\"effort\":1.0,\"requirementParts\":[{\"id\":\"1\",\"name\":\"UI\"}],\"name\":null,\"description\":\"[Platform] Save As with a E4 Part\",\"modified_at\":\"2017-01-04T11:30:00Z\"}," +
@@ -44,7 +45,7 @@ public class TfIdfTest {
     }
 
     @Test
-    public void computeTFIDFSingular() throws IOException {
+    public void computeTFIDFSingular() throws IOException, ExecutionException, InterruptedException {
         TFIDFKeywordExtractor keywordExtractor=new TFIDFKeywordExtractor(-1.0);
         String object="[{\"id\":\"509913\",\"effort\":1.0,\"requirementParts\":[{\"id\":\"1\",\"name\":\"UI\"}],\"name\":null,\"description\":\"PropertyEditingSupport does not check if IPropertySource is null\",\"modified_at\":\"2017-01-04T09:58:57Z\"}," +
                 "{\"id\":\"509920\",\"effort\":1.0,\"requirementParts\":[{\"id\":\"1\",\"name\":\"UI\"}],\"name\":null,\"description\":\"[Platform] Save As with a E4 Part\",\"modified_at\":\"2017-01-04T11:30:00Z\"}," +
@@ -74,7 +75,7 @@ public class TfIdfTest {
     }
 
     @Test
-    public void computeTFIDFExtra() throws IOException {
+    public void computeTFIDFExtra() throws IOException, ExecutionException, InterruptedException {
         TFIDFKeywordExtractor keywordExtractor=new TFIDFKeywordExtractor(-1.0);
         String object="[{\"id\":\"509913\",\"effort\":1.0,\"requirementParts\":[{\"id\":\"1\",\"name\":\"UI\"}],\"name\":null,\"description\":\"PropertyEditingSupport does not check if IPropertySource is null\",\"modified_at\":\"2017-01-04T09:58:57Z\"}," +
                 "{\"id\":\"509920\",\"effort\":1.0,\"requirementParts\":[{\"id\":\"1\",\"name\":\"UI\"}],\"name\":null,\"description\":\"[Platform] Save As with a E4 Part\",\"modified_at\":\"2017-01-04T11:30:00Z\"}," +

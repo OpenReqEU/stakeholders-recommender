@@ -458,6 +458,7 @@ public class StakeholdersRecommenderServiceTest {
         Double dist=(double) distance(s,res);
         Double percentage =dist/res.length();
         System.out.println(res);
+        System.out.println(s);
         assertTrue(percentage<0.1);
     }
 
@@ -474,10 +475,11 @@ public class StakeholdersRecommenderServiceTest {
         int k = 10;
         List<RecommendReturnSchema> result = instance.recommend(req, k, true, "UPC",2);
         String res = mapper.writeValueAsString(result);
-        String s="[{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"1\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.9436916164438838},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"22\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.582605645400728},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"2\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.5290132472725831},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"15\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.3704632051789171},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"142\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.36509883405276544},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"25\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.30441918025590664},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"38\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.30161140327708996},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"212\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.24308899850588908},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"65\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.2394308817456018},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"214\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.21949165326216402}]\n";
+        String s="[{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"1\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.9436916164438838},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"22\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.5725932934971899},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"2\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.5280569185627522},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"15\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.3674692030342768},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"142\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.36614141486640756},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"25\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.30540104107475147},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"38\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.3025842080101742},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"65\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.24020313204011295},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"212\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.24018030880835844},{\"requirement\":{\"id\":\"1\"},\"person\":{\"username\":\"79\"},\"availabilityScore\":1.0,\"appropiatenessScore\":0.2146943038226333}]\n";
         Double dist=(double) distance(s,res);
         Double percentage =dist/res.length();
         System.out.println(res);
+        System.out.println(s);
         assertTrue(percentage<0.1);
     }
 

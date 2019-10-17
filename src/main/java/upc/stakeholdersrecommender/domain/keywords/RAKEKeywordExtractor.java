@@ -13,7 +13,6 @@ import java.io.StringReader;
 import java.util.*;
 
 public class RAKEKeywordExtractor {
-
     private Double cutoff = 3.0;
     private TextPreprocessing preprocess = new TextPreprocessing();
 

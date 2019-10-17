@@ -18,9 +18,15 @@ import javax.transaction.Transactional;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import com.landawn.abacus.util.stream.IntStream;
 
 import static java.lang.Double.max;
 
+// Bug de cross reference
+// Deploy de similarity
+//Paralelismo stakeholders-recommender
 @Service
 @Transactional
 public class StakeholdersRecommenderService {
@@ -93,12 +99,8 @@ public class StakeholdersRecommenderService {
                 if (!uniquePersons.contains(pers.getName())) {
                     if (hasTime(pers, organization)) {
                         uniquePersons.add(pers.getName());
-                        PersonSR per = new PersonSR();
-                        per.setComponents(pers.getComponents());
+                        PersonSR per = new PersonSR(pers);
                         per.setAvailability(1.0);
-                        per.setHours(pers.getHours());
-                        per.setSkills(pers.getSkills());
-                        per.setName(pers.getName());
                         persList.add(per);
                     }
                 }
@@ -198,10 +200,14 @@ public class StakeholdersRecommenderService {
         return percentage;
     }
 
-    private Pair<PersonSR, Double>[] computeBestStakeholders(List<PersonSR> persList, RequirementSR req, Double hours, int k, Boolean projectSpecific) throws IOException {
+    private Pair<PersonSR, Double>[] computeBestStakeholders(List<PersonSR> persList, RequirementSR req, Double hours, int k, Boolean projectSpecific) throws IOException, ExecutionException, InterruptedException {
         List<Pair<PersonSR, Pair<Double, Double>>> valuesForSR = new ArrayList<>();
-
-        for (PersonSR person : persList) {
+        ConcurrentHashMap<Integer, Pair<PersonSR, Pair<Double, Double>>> concurrentMap = new ConcurrentHashMap<>();
+        Set<String> reqSkills=req.getSkillsSet();
+        List<String> component=req.getComponent();
+        IntStream.range(0, persList.size())
+                .parallel(4).forEach(i -> {
+            PersonSR person =  persList.get(i).deepCopy();
             Double sum = 0.0;
             Double compSum = 0.0;
             Double resComp = 0.0;
@@ -214,7 +220,12 @@ public class StakeholdersRecommenderService {
                         sum = sum + j.getWeight();
                         break;
                     } else {
-                        Double val = WordEmbedding.computeSimilarity(j.getName(), s);
+                        Double val = null;
+                        try {
+                            val = WordEmbedding.computeSimilarity(j.getName(), s);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                         if (val > weightToAdd) {
                             weightToAdd = val;
                             mostSimilarSkill = j;
@@ -226,34 +237,43 @@ public class StakeholdersRecommenderService {
                         sum = sum + weightToAdd * mostSimilarSkill.getWeight();
                 }
             }
-            if (req.getComponent() != null) {
-                for (String s : req.getComponent()) {
+            if (component != null) {
+                if (person.getComponents()!=null)
+                    for (String s : component) {
                     for (Skill j : person.getComponents()) {
                         if (s.equals(j.getName())) {
                             compSum += j.getWeight();
                         }
                     }
                 }
-                resComp = compSum / req.getComponent().size();
+                resComp = compSum / component.size();
             }
             Double res;
-            if (req.getSkillsSet().size() == 0) {
+            if (reqSkills.size() == 0) {
                 res = 0.0;
             } else {
-                res = sum / req.getSkillsSet().size();
+                res = sum / reqSkills.size();
             }
             Map<String, Skill> skillTrad = new HashMap<>();
-            Double appropiateness = getAppropiateness(req, person, skillTrad);
+            Double appropiateness = null;
+            try {
+                appropiateness = getAppropiateness(reqSkills, person, skillTrad);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             res = res * 3 + person.getAvailability() + resComp * 10;
             if ((projectSpecific && person.getAvailability() >= (hours / person.getHours())) && appropiateness != 0.0) {
                 Pair<Double, Double> auxPair = new Pair<>(-res, appropiateness);
                 Pair<PersonSR, Pair<Double, Double>> valuePair = new Pair<>(person, auxPair);
-                valuesForSR.add(valuePair);
+                concurrentMap.put(i, valuePair);
             } else if (!projectSpecific && appropiateness != 0.0) {
                 Pair<Double, Double> auxPair = new Pair<>(-res, appropiateness);
                 Pair<PersonSR, Pair<Double, Double>> valuePair = new Pair<>(person, auxPair);
-                valuesForSR.add(valuePair);
+                concurrentMap.put(i, valuePair);
             }
+        });
+        for (Integer i : new TreeSet<>(concurrentMap.keySet())) {
+            valuesForSR.add(concurrentMap.get(i));
         }
         Collections.sort(valuesForSR, Comparator.comparing(u -> u.getSecond().getFirst()));
         if (k >= valuesForSR.size()) {
@@ -266,8 +286,7 @@ public class StakeholdersRecommenderService {
         return out;
     }
 
-    private Double getAppropiateness(RequirementSR req, PersonSR person, Map<String, Skill> skillTrad) throws IOException {
-        Set<String> reqSkills = req.getSkillsSet();
+    private Double getAppropiateness(Set<String> reqSkills, PersonSR person, Map<String, Skill> skillTrad) throws IOException {
         Double total = 0.0;
         if (person.getSkills() != null && person.getSkills().size() > 0) {
             for (Skill sk : person.getSkills()) {
@@ -295,7 +314,7 @@ public class StakeholdersRecommenderService {
                 }
             }
         }
-        Double amount = (double) req.getSkillsSet().size();
+        Double amount = (double) reqSkills.size();
         Double appropiateness;
         if (amount == 0.0) {
             appropiateness = 0.0;
@@ -370,7 +389,7 @@ public class StakeholdersRecommenderService {
             SimpleDateFormat inFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX");
             Date dtIn = inFormat.parse(r.getModified_at());
             r.setModified(dtIn);
-            if (r.getName()!=null) r.setDescription(r.getDescription() + " . " + r.getName());
+            if (r.getName() != null) r.setDescription(r.getDescription() + " . " + r.getName());
             recs.put(r.getId(), r);
         }
         Map<String, Set<String>> personRecs = getPersonRecs(request);
@@ -381,7 +400,7 @@ public class StakeholdersRecommenderService {
         if (!bugzillaPreprocessing) {
             if (requeriments.size() > 100) rake = false;
             if (rake) allSkills = SkillExtractor.computeAllSkillsRequirementRAKE(recs, organization);
-            else allSkills = SkillExtractor.computeAllSkillsRequirement(recs, organization,selectivity);
+            else allSkills = SkillExtractor.computeAllSkillsRequirement(recs, organization, selectivity);
         } else {
             allSkills = SkillExtractor.computeAllSkillsNoMethod(recs);
         }
@@ -410,7 +429,7 @@ public class StakeholdersRecommenderService {
         Map<String, Integer> loggingFrequency = null;
 
         if (logging) {
-            pair = RiLogging.getUserLogging(bugzillaPreprocessing, rake, organization, recSize, test,selectivity);
+            pair = RiLogging.getUserLogging(bugzillaPreprocessing, rake, organization, recSize, test, selectivity);
             loggingFrequency = getSkillFrequency(pair.getFirst());
         }
 
@@ -436,7 +455,7 @@ public class StakeholdersRecommenderService {
             }
             List<Participant> part = new ArrayList<>();
             if (participants.containsKey(proj.getId())) part = participants.get(proj.getId());
-            String id = instanciateProject(proj, part, organization, rake, recSize, bugzillaPreprocessing,selectivity);
+            String id = instanciateProject(proj, part, organization, rake, recSize, bugzillaPreprocessing, selectivity);
             Map<String, Double> hourMap = new HashMap<>();
             for (Participant par : part) {
                 hourMap.put(par.getPerson(), par.getAvailability());
@@ -844,5 +863,6 @@ public class StakeholdersRecommenderService {
         }
 
     }
+
 
 }

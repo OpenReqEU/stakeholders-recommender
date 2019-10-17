@@ -53,6 +53,19 @@ public class PersonSR implements Serializable {
 
     }
 
+    public PersonSR(PersonSR per) {
+        this.id = per.getId();
+        this.name = per.getName();
+        this.skills=per.getSkills();
+        this.projectIdQuery=per.getProjectIdQuery();
+        this.organization=per.getOrganization();
+        this.availability=per.getAvailability();
+        this.hours=per.getHours();
+        this.components=per.getComponents();
+
+
+    }
+
     public PersonSR(String s, List<Skill> skills, Double hoursDefault, String newId, String organization, List<Skill> components, double v, PersonSRId personSRId) {
         this.name = s;
         this.skills = skills;
@@ -126,5 +139,10 @@ public class PersonSR implements Serializable {
 
     public void setOrganization(String organization) {
         this.organization = organization;
+    }
+
+    public PersonSR deepCopy() {
+        PersonSR per=new PersonSR(this.name, this.skills, this.hours, this.projectIdQuery, this.organization, this.components, this.availability, this.id);
+        return per;
     }
 }
