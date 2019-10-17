@@ -12,6 +12,7 @@ import upc.stakeholdersrecommender.domain.keywords.TFIDFKeywordExtractor;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
 import static org.junit.Assert.assertEquals;
@@ -62,7 +63,7 @@ public class TfIdfTest {
         }
         keywordExtractor.computeTFIDF(reqList);
 
-        HashMap<String,Integer> model=keywordExtractor.getCorpusFrequency();
+        ConcurrentHashMap<String,Integer> model=keywordExtractor.getCorpusFrequency();
         TypeReference<HashMap<String, Integer>> typeRef
                 = new TypeReference<HashMap<String, Integer>>() {};
         Requirement req=new Requirement();
@@ -92,7 +93,7 @@ public class TfIdfTest {
         }
         keywordExtractor.computeTFIDF(reqList);
 
-        HashMap<String,Integer> model=keywordExtractor.getCorpusFrequency();
+        ConcurrentHashMap<String,Integer> model=keywordExtractor.getCorpusFrequency();
         TypeReference<HashMap<String, Integer>> typeRef
                 = new TypeReference<HashMap<String, Integer>>() {};
         Map<String,Requirement> mappy=new HashMap<>();

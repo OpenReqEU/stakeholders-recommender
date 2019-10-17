@@ -1,6 +1,7 @@
 package upc.stakeholdersrecommender.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.landawn.abacus.util.stream.IntStream;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.math3.util.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +21,6 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-import com.landawn.abacus.util.stream.IntStream;
 
 import static java.lang.Double.max;
 
@@ -56,6 +56,9 @@ public class StakeholdersRecommenderService {
     private KeywordExtractionModelRepository KeywordExtractionModelRepository;
     @Autowired
     private SkillExtractor SkillExtractor;
+
+    private int batchSize=50;
+
 
     public static <E> E[] createArray(int length, E... elements) {
         return Arrays.copyOf(elements, length);
@@ -126,7 +129,7 @@ public class StakeholdersRecommenderService {
                 }
             }
         }
-        Pair<PersonSR, Double>[] bestPeople = computeBestStakeholders(clean, req, hours, k, projectSpecific);
+        Pair<PersonSimple, Double>[] bestPeople = computeBestStakeholders(clean, req, hours, k, projectSpecific);
         ret = prepareFinal(bestPeople, req);
         return ret;
     }
@@ -146,11 +149,11 @@ public class StakeholdersRecommenderService {
         return newList;
     }
 
-    private List<RecommendReturnSchema> prepareFinal(Pair<PersonSR, Double>[] people, RequirementSR req) throws IOException {
+    private List<RecommendReturnSchema> prepareFinal(Pair<PersonSimple, Double>[] people, RequirementSR req) throws IOException {
         List<RecommendReturnSchema> ret = new ArrayList<>();
-        for (Pair<PersonSR, Double> personPair : people) {
+        for (Pair<PersonSimple, Double> personPair : people) {
             Double appropiateness = personPair.getSecond();
-            PersonSR pers = personPair.getFirst();
+            PersonSimple pers = personPair.getFirst();
             if (appropiateness > 0.0) {
                 PersonMinimal min = new PersonMinimal();
                 min.setUsername(pers.getName());
@@ -170,11 +173,11 @@ public class StakeholdersRecommenderService {
         return ret;
     }
 
-    private Double getPercentage(RecommendReturnSchema best, Pair<PersonSR, Double>[] people, RequirementSR req) throws IOException {
+    private Double getPercentage(RecommendReturnSchema best, Pair<PersonSimple, Double>[] people, RequirementSR req) throws IOException {
         Double percentage = 0.0;
         Double intersect = 0.0;
-        PersonSR chosen = null;
-        for (Pair<PersonSR, Double> pers : people) {
+        PersonSimple chosen = null;
+        for (Pair<PersonSimple, Double> pers : people) {
             if (pers.getFirst().getName().equals(best.getPerson().getUsername())) chosen = pers.getFirst();
         }
         for (String sk : req.getSkillsSet()) {
@@ -200,78 +203,86 @@ public class StakeholdersRecommenderService {
         return percentage;
     }
 
-    private Pair<PersonSR, Double>[] computeBestStakeholders(List<PersonSR> persList, RequirementSR req, Double hours, int k, Boolean projectSpecific) throws IOException, ExecutionException, InterruptedException {
-        List<Pair<PersonSR, Pair<Double, Double>>> valuesForSR = new ArrayList<>();
-        ConcurrentHashMap<Integer, Pair<PersonSR, Pair<Double, Double>>> concurrentMap = new ConcurrentHashMap<>();
-        Set<String> reqSkills=req.getSkillsSet();
-        List<String> component=req.getComponent();
-        IntStream.range(0, persList.size())
-                .parallel(4).forEach(i -> {
-            PersonSR person =  persList.get(i).deepCopy();
-            Double sum = 0.0;
-            Double compSum = 0.0;
-            Double resComp = 0.0;
-            for (String s : req.getSkillsSet()) {
-                Double weightToAdd = 0.0;
-                Skill mostSimilarSkill = null;
-                for (Skill j : person.getSkills()) {
-                    if (j.getName().equals(s)) {
-                        weightToAdd = 100.0;
-                        sum = sum + j.getWeight();
-                        break;
-                    } else {
-                        Double val = null;
+    private Pair<PersonSimple, Double>[] computeBestStakeholders(List<PersonSR> persList, RequirementSR req, Double hours, int k, Boolean projectSpecific) throws IOException, ExecutionException, InterruptedException {
+        List<Pair<PersonSimple, Pair<Double, Double>>> valuesForSR = new ArrayList<>();
+        ConcurrentHashMap<Integer, Pair<PersonSimple, Pair<Double, Double>>> concurrentMap = new ConcurrentHashMap<>();
+        Set<String> reqSkills = req.getSkillsSet();
+        List<String> component = req.getComponent();
+        int batches = (persList.size() / batchSize) + 1;
+        IntStream.range(0, batches)
+                .parallel(10).forEach(i -> {
+                    int n = i * batchSize;
+                    int max = batchSize;
+                    for (int l = 0; l < max; ++l) {
+                        int current = n + l;
+                        if (current >= persList.size()) break;
+                        PersonSimple person = new PersonSimple(persList.get(current));
+                        Double sum = 0.0;
+                        Double compSum = 0.0;
+                        Double resComp = 0.0;
+                        for (String s : req.getSkillsSet()) {
+                            Double weightToAdd = 0.0;
+                            Skill mostSimilarSkill = null;
+                            for (Skill j : person.getSkills()) {
+                                if (j.getName().equals(s)) {
+                                    weightToAdd = 100.0;
+                                    sum = sum + j.getWeight();
+                                    break;
+                                } else {
+                                    Double val = null;
+                                    try {
+                                        val = WordEmbedding.computeSimilarity(j.getName(), s);
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                    if (val > weightToAdd) {
+                                        weightToAdd = val;
+                                        mostSimilarSkill = j;
+                                    }
+                                }
+                            }
+                            if (weightToAdd != 100.0) {
+                                if (weightToAdd != 0.0 && mostSimilarSkill != null)
+                                    sum = sum + weightToAdd * mostSimilarSkill.getWeight();
+                            }
+                        }
+                        if (component != null) {
+                            if (person.getComponents() != null)
+                                for (String s : component) {
+                                    for (Skill j : person.getComponents()) {
+                                        if (s.equals(j.getName())) {
+                                            compSum += j.getWeight();
+                                        }
+                                    }
+                                }
+                            resComp = compSum / component.size();
+                        }
+                        Double res;
+                        if (reqSkills.size() == 0) {
+                            res = 0.0;
+                        } else {
+                            res = sum / reqSkills.size();
+                        }
+                        Map<String, Skill> skillTrad = new HashMap<>();
+                        Double appropiateness = null;
                         try {
-                            val = WordEmbedding.computeSimilarity(j.getName(), s);
+                            appropiateness = getAppropiateness(reqSkills, person, skillTrad);
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
-                        if (val > weightToAdd) {
-                            weightToAdd = val;
-                            mostSimilarSkill = j;
+                        res = res * 3 + person.getAvailability() + resComp * 10;
+                        if ((projectSpecific && person.getAvailability() >= (hours / person.getHours())) && appropiateness != 0.0) {
+                            Pair<Double, Double> auxPair = new Pair<>(-res, appropiateness);
+                            Pair<PersonSimple, Pair<Double, Double>> valuePair = new Pair<>(person, auxPair);
+                            concurrentMap.put(current, valuePair);
+                        } else if (!projectSpecific && appropiateness != 0.0) {
+                            Pair<Double, Double> auxPair = new Pair<>(-res, appropiateness);
+                            Pair<PersonSimple, Pair<Double, Double>> valuePair = new Pair<>(person, auxPair);
+                            concurrentMap.put(current, valuePair);
                         }
                     }
                 }
-                if (weightToAdd != 100.0) {
-                    if (weightToAdd != 0.0 && mostSimilarSkill != null)
-                        sum = sum + weightToAdd * mostSimilarSkill.getWeight();
-                }
-            }
-            if (component != null) {
-                if (person.getComponents()!=null)
-                    for (String s : component) {
-                    for (Skill j : person.getComponents()) {
-                        if (s.equals(j.getName())) {
-                            compSum += j.getWeight();
-                        }
-                    }
-                }
-                resComp = compSum / component.size();
-            }
-            Double res;
-            if (reqSkills.size() == 0) {
-                res = 0.0;
-            } else {
-                res = sum / reqSkills.size();
-            }
-            Map<String, Skill> skillTrad = new HashMap<>();
-            Double appropiateness = null;
-            try {
-                appropiateness = getAppropiateness(reqSkills, person, skillTrad);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            res = res * 3 + person.getAvailability() + resComp * 10;
-            if ((projectSpecific && person.getAvailability() >= (hours / person.getHours())) && appropiateness != 0.0) {
-                Pair<Double, Double> auxPair = new Pair<>(-res, appropiateness);
-                Pair<PersonSR, Pair<Double, Double>> valuePair = new Pair<>(person, auxPair);
-                concurrentMap.put(i, valuePair);
-            } else if (!projectSpecific && appropiateness != 0.0) {
-                Pair<Double, Double> auxPair = new Pair<>(-res, appropiateness);
-                Pair<PersonSR, Pair<Double, Double>> valuePair = new Pair<>(person, auxPair);
-                concurrentMap.put(i, valuePair);
-            }
-        });
+        );
         for (Integer i : new TreeSet<>(concurrentMap.keySet())) {
             valuesForSR.add(concurrentMap.get(i));
         }
@@ -279,14 +290,14 @@ public class StakeholdersRecommenderService {
         if (k >= valuesForSR.size()) {
             k = valuesForSR.size();
         }
-        Pair<PersonSR, Double>[] out = createArray(k);
+        Pair<PersonSimple, Double>[] out = createArray(k);
         for (int i = 0; i < k && i < valuesForSR.size(); ++i) {
             out[i] = new Pair<>(valuesForSR.get(i).getFirst(), valuesForSR.get(i).getSecond().getSecond());
         }
         return out;
     }
 
-    private Double getAppropiateness(Set<String> reqSkills, PersonSR person, Map<String, Skill> skillTrad) throws IOException {
+    private Double getAppropiateness(Set<String> reqSkills, PersonSimple person, Map<String, Skill> skillTrad) throws IOException {
         Double total = 0.0;
         if (person.getSkills() != null && person.getSkills().size() > 0) {
             for (Skill sk : person.getSkills()) {

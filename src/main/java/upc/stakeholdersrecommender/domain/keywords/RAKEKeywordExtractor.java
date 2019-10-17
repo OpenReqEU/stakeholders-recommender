@@ -10,7 +10,10 @@ import upc.stakeholdersrecommender.domain.TextPreprocessing;
 
 import java.io.IOException;
 import java.io.StringReader;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class RAKEKeywordExtractor {
     private Double cutoff = 3.0;

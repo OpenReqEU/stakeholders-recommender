@@ -1,14 +1,10 @@
 package upc.stakeholdersrecommender.domain;
 
-import edu.stanford.nlp.util.ArraySet;
-import edu.stanford.nlp.util.MaxSizeConcurrentHashSet;
-import io.swagger.models.auth.In;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -29,13 +25,14 @@ public class TextPreprocessing {
                 exclusions = new ConcurrentHashMap<>();
 
                 while ((word = reader.readLine()) != null) {
-                    exclusions.put(word,0);
+                    exclusions.put(word, 0);
                 }
                 reader.close();
             }
             for (String l : text.split(" ")) {
-                if (!(l.toLowerCase().equals("null") && !l.equals("null") && !l.equals("Null")) && !l.toUpperCase().equals(l)) l = l.toLowerCase();
-                if (l != null && !exclusions.keySet().contains(l) && l.length() > 1) {
+                if (!(l.toLowerCase().equals("null") && !l.equals("null") && !l.equals("Null")) && !l.toUpperCase().equals(l))
+                    l = l.toLowerCase();
+                if (l != null && !exclusions.containsKey(l) && l.length() > 1) {
                     trueRes = trueRes.concat(l + " ");
                 }
             }

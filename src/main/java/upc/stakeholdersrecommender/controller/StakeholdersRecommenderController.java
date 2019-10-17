@@ -40,7 +40,7 @@ public class StakeholdersRecommenderController {
                                    @RequestParam Boolean withComponent, @ApiParam(value = "The organization that is making the request.", example = "UPC", required = true)
                                    @RequestParam String organization, @ApiParam(value = "If auto-mapping is used (i.e., set to true), it is not necessary to set or compute effort (i.e., to establish the mappint from effort points to hours). The mapping used in auto-mapping is a 1 to 1 mapping of effort to hours.", example = "true", required = true)
                                    @RequestParam Boolean autoMapping, @ApiParam(value = "If set to true, the endpoint returns each requirement with its set of keywords instead of its normal return object.", example = "false", required = false, defaultValue = "false")
-                                   @RequestParam(value="keywords",defaultValue = "false",required=false) Boolean keywords, @ApiParam(value = "Whether a specific separate text preprocessor is used", example = "true", required = false) @RequestParam(value = "keywordPreprocessing", defaultValue = "false", required = false) Boolean bugzilla,
+                                   @RequestParam(value = "keywords", defaultValue = "false", required = false) Boolean keywords, @ApiParam(value = "Whether a specific separate text preprocessor is used", example = "true", required = false) @RequestParam(value = "keywordPreprocessing", defaultValue = "false", required = false) Boolean bugzilla,
                                    @ApiParam(value = "Whether OpenReq Live logging is taken into account", example = "false", required = false) @RequestParam(value = "logging", defaultValue = "false", required = false) Boolean logging,
                                    @ApiParam(value = "Keyword selectivity factor, higher means less, only used if more than 100 requirements, and no specific keyword tool is specified", example = "3", required = false) @RequestParam(value = "selectivityFactor", defaultValue = "-1", required = false) Double selectivity) throws Exception {
 
@@ -48,13 +48,13 @@ public class StakeholdersRecommenderController {
         Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         String s = formatter.format(new Date());
         System.out.println(s + " | Starting batch process from " + organization);
-        System.out.println(batch.getRequirements().size());
+        System.out.println("Processing "+batch.getRequirements().size()+" requeriments");
         int res = 0;
         try {
-            res = stakeholdersRecommenderService.addBatch(batch, withAvailability, withComponent, organization, autoMapping, bugzilla, logging, 0,selectivity);
+            res = stakeholdersRecommenderService.addBatch(batch, withAvailability, withComponent, organization, autoMapping, bugzilla, logging, 0, selectivity);
         } catch (IOException e) {
             s = formatter.format(new Date());
-            System.out.println(s + " | Finished batch process " + organization);
+            System.out.println(s + " | Finished batch process " + organization+" for "+organization);
             return new ResponseEntity(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         if (!keywords) {

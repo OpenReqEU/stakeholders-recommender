@@ -12,6 +12,7 @@ import upc.stakeholdersrecommender.repository.KeywordExtractionModelRepository;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -33,7 +34,7 @@ public class SkillExtractor {
     @Autowired
     private PreprocessService Preprocess;
 
-    public Map<String, Map<String, Double>> obtainSkills(Map<String, Requirement> trueRecs, Boolean bugzilla, Boolean rake, String organization, Integer size, Integer test,Double selectivity) throws IOException {
+    public Map<String, Map<String, Double>> obtainSkills(Map<String, Requirement> trueRecs, Boolean bugzilla, Boolean rake, String organization, Integer size, Integer test, Double selectivity) throws IOException {
         Map<String, Map<String, Double>> map;
         if (rake) {
             map = new RAKEKeywordExtractor().computeRake(new ArrayList<>(trueRecs.values()));
@@ -79,7 +80,7 @@ public class SkillExtractor {
         return skills;
     }
 
-    public Map<String, Map<String, Double>> computeAllSkillsRequirement(Map<String, Requirement> recs, String organization,Double selectivity) throws IOException, ExecutionException, InterruptedException {
+    public Map<String, Map<String, Double>> computeAllSkillsRequirement(Map<String, Requirement> recs, String organization, Double selectivity) throws IOException, ExecutionException, InterruptedException {
         TFIDFKeywordExtractor extractor = new TFIDFKeywordExtractor(selectivity);
         //Extract map with (Requirement / KeywordValue)
         Map<String, Map<String, Double>> keywords = extractor.computeTFIDF(new ArrayList<>(recs.values()));
@@ -88,7 +89,7 @@ public class SkillExtractor {
 
         //Skill factor is a linear function, dropping off lineally up to maxDropoff, based on the days
         //since the requirement was last touched
-        HashMap<String, Integer> mod = extractor.getCorpusFrequency();
+        ConcurrentHashMap<String, Integer> mod = extractor.getCorpusFrequency();
         KeywordExtractionModel toSave = new KeywordExtractionModel();
         toSave.setModel(mod);
         toSave.setId(organization);

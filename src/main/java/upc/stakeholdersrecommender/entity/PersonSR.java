@@ -56,12 +56,12 @@ public class PersonSR implements Serializable {
     public PersonSR(PersonSR per) {
         this.id = per.getId();
         this.name = per.getName();
-        this.skills=per.getSkills();
-        this.projectIdQuery=per.getProjectIdQuery();
-        this.organization=per.getOrganization();
-        this.availability=per.getAvailability();
-        this.hours=per.getHours();
-        this.components=per.getComponents();
+        this.skills = per.getSkills();
+        this.projectIdQuery = per.getProjectIdQuery();
+        this.organization = per.getOrganization();
+        this.availability = per.getAvailability();
+        this.hours = per.getHours();
+        this.components = per.getComponents();
 
 
     }
@@ -142,7 +142,7 @@ public class PersonSR implements Serializable {
     }
 
     public PersonSR deepCopy() {
-        PersonSR per=new PersonSR(this.name, this.skills, this.hours, this.projectIdQuery, this.organization, this.components, this.availability, this.id);
+        PersonSR per = new PersonSR(this.name, this.skills, this.hours, this.projectIdQuery, this.organization, this.components, this.availability, this.id);
         return per;
     }
 }

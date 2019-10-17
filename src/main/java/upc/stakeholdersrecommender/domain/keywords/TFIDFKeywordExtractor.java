@@ -1,5 +1,6 @@
 package upc.stakeholdersrecommender.domain.keywords;
 
+import com.landawn.abacus.util.stream.IntStream;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.custom.CustomAnalyzer;
 import upc.stakeholdersrecommender.domain.Requirement;
@@ -9,15 +10,14 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ForkJoinPool;
-import com.landawn.abacus.util.stream.IntStream;
 
 
 public class TFIDFKeywordExtractor {
 
     private Double cutoffParameter; //This can be set to different values for different selectivity (more or less keywords)
-    private HashMap<String, Integer> corpusFrequency = new HashMap<>();
+    private ConcurrentHashMap<String, Integer> corpusFrequency = new ConcurrentHashMap<>();
     private TextPreprocessing text_preprocess = new TextPreprocessing();
+    private int batchSize=1000;
 
     public TFIDFKeywordExtractor(Double cutoff) {
         if (cutoff == -1.0) cutoffParameter = 4.0;
@@ -68,22 +68,26 @@ public class TFIDFKeywordExtractor {
     }
 
     public Map<String, Map<String, Double>> computeTFIDF(List<Requirement> corpus) throws IOException, ExecutionException, InterruptedException {
-        ConcurrentHashMap<Integer,List<String>> concurrentMap=new ConcurrentHashMap<>();
-        ForkJoinPool forkJoinPool = new ForkJoinPool(4);
+        ConcurrentHashMap<Integer, List<String>> concurrentMap = new ConcurrentHashMap<>();
+        int batches = (corpus.size() / batchSize) + 1;
+        IntStream.range(0, batches)
+                .parallel(8).forEach(i -> {
+            int n = i * batchSize;
+            int max = batchSize;
+            for (int l = 0; l < max; ++l) {
+                int current = n + l;
+                if (current >= corpus.size()) break;
+                Requirement r = corpus.get(current);
+                List<String> s = new ArrayList<>();
+                try {
+                    s = englishAnalyze(r.getDescription());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                concurrentMap.put(current, s);
 
-        forkJoinPool.submit(() ->
-                IntStream.range(0, corpus.size())
-                .parallel().forEach(i -> {
-            Requirement r= corpus.get(i);
-            List<String> s = new ArrayList<>();
-            try {
-                s = englishAnalyze(r.getDescription());
-            } catch (IOException e) {
-                e.printStackTrace();
             }
-            concurrentMap.put(i,s);
-
-        })).get();
+        });
         List<List<String>> trueDocs = new ArrayList<>();
         for (int i = 0; i < concurrentMap.keySet().size(); ++i) {
             trueDocs.add(concurrentMap.get(i));
@@ -136,29 +140,45 @@ public class TFIDFKeywordExtractor {
     private List<Map<String, Double>> tfIdf(List<List<String>> docs) throws ExecutionException, InterruptedException {
         List<Map<String, Double>> tfidfComputed = new ArrayList<>();
         List<Map<String, Integer>> wordBag = new ArrayList<>();
-        ConcurrentHashMap<Integer,Map<String, Double>> concurrentMap=new ConcurrentHashMap<>();
-        for (List<String> doc : docs) {
-            wordBag.add(tf(doc));
-        }
-        ForkJoinPool forkJoinPool = new ForkJoinPool(4);
-
-        forkJoinPool.submit(() ->
-                IntStream.range(0, docs.size())
-                .parallel().forEach(i -> {
-            HashMap<String, Double> aux = new HashMap<>();
-            List<String> doc = docs.get(i);
-            for (String s : doc) {
-                Double idf = idf(docs.size(), corpusFrequency.get(s));
-                Integer tf = wordBag.get(i).get(s);
-                Double tfidf = idf * tf;
-                if (tfidf >= cutoffParameter && s.length() > 1) {
-                    aux.put(s, tfidf);
-                }
+        ConcurrentHashMap<Integer, Map<String, Double>> concurrentMap = new ConcurrentHashMap<>();
+        int batches = (docs.size() / batchSize) + 1;
+        ConcurrentHashMap<Integer, Map<String, Integer>> auxConcurrentMap = new ConcurrentHashMap<>();
+        IntStream.range(0, batches)
+                .parallel(8).forEach(i -> {
+            int n = i * batchSize;
+            int max = batchSize;
+            for (int l = 0; l < max; ++l) {
+                int current = n + l;
+                if (current >= docs.size()) break;
+                List<String> doc = docs.get(current);
+                auxConcurrentMap.put(current, tf(doc));
             }
-            concurrentMap.put(i,aux);
-            ++i;
-        })).get();
-        for (int i=0;i<concurrentMap.keySet().size();++i) {
+        });
+        for (int i = 0; i < auxConcurrentMap.keySet().size(); ++i) {
+            wordBag.add(auxConcurrentMap.get(i));
+        }
+        IntStream.range(0, batches)
+                .parallel(8).forEach(i -> {
+            int n = i * batchSize;
+            int max = batchSize;
+            for (int l = 0; l < max; ++l) {
+                int current = n + l;
+                if (current >= docs.size()) break;
+                HashMap<String, Double> aux = new HashMap<>();
+                List<String> doc = docs.get(current);
+                for (String s : new TreeSet<>(doc)) {
+                    Double idf = idf(docs.size(), corpusFrequency.get(s));
+                    Integer tf = wordBag.get(current).get(s);
+                    Double tfidf = idf * tf;
+                    if (tfidf >= cutoffParameter && s.length() > 1) {
+                        aux.put(s, tfidf);
+                    }
+                }
+                concurrentMap.put(current, aux);
+                ++i;
+            }
+        });
+        for (int i = 0; i < concurrentMap.keySet().size(); ++i) {
             tfidfComputed.add(concurrentMap.get(i));
         }
         return tfidfComputed;
@@ -171,24 +191,24 @@ public class TFIDFKeywordExtractor {
         if (text.contains("[")) {
             String[] p = text.split("]\\[");
             for (String f : p) {
-                if (f!=null&&f.length()>0) {
-                if (f.charAt(0) != '[') f = "[" + f;
-                if (f.charAt(f.length() - 1) != ']') f = f.concat("]");
-                String[] thing = f.split("\\[");
-                if (thing.length > 1) {
-                    String[] help = thing[1].split("]");
-                    if (help.length > 0) {
-                        String[] badIdea = help[0].split(" ");
-                        String nice = "";
-                        for (String s : badIdea) {
-                            nice = nice.concat(s);
-                        }
-                        for (int i = 0; i < 10; ++i) {
-                            result = result.concat(" " + nice);
+                if (f != null && f.length() > 0) {
+                    if (f.charAt(0) != '[') f = "[" + f;
+                    if (f.charAt(f.length() - 1) != ']') f = f.concat("]");
+                    String[] thing = f.split("\\[");
+                    if (thing.length > 1) {
+                        String[] help = thing[1].split("]");
+                        if (help.length > 0) {
+                            String[] badIdea = help[0].split(" ");
+                            String nice = "";
+                            for (String s : badIdea) {
+                                nice = nice.concat(s);
+                            }
+                            for (int i = 0; i < 10; ++i) {
+                                result = result.concat(" " + nice);
+                            }
                         }
                     }
                 }
-            }
             }
         }
         String[] aux4 = text.split("]");
@@ -207,11 +227,11 @@ public class TFIDFKeywordExtractor {
     }
 
 
-    public HashMap<String, Integer> getCorpusFrequency() {
+    public ConcurrentHashMap<String, Integer> getCorpusFrequency() {
         return corpusFrequency;
     }
 
-    public void setCorpusFrequency(HashMap<String, Integer> corpusFrequency) {
+    public void setCorpusFrequency(ConcurrentHashMap<String, Integer> corpusFrequency) {
         this.corpusFrequency = corpusFrequency;
     }
 
