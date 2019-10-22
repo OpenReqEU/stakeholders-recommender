@@ -1,6 +1,5 @@
 package upc.stakeholdersrecommender.domain.keywords;
 
-import com.landawn.abacus.util.stream.IntStream;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.custom.CustomAnalyzer;
 import upc.stakeholdersrecommender.domain.Requirement;
@@ -10,6 +9,8 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
+import java.util.stream.IntStream;
 
 
 public class TFIDFKeywordExtractor {
@@ -70,8 +71,10 @@ public class TFIDFKeywordExtractor {
     public Map<String, Map<String, Double>> computeTFIDF(List<Requirement> corpus) throws IOException, ExecutionException, InterruptedException {
         ConcurrentHashMap<Integer, List<String>> concurrentMap = new ConcurrentHashMap<>();
         int batches = (corpus.size() / batchSize) + 1;
+        ForkJoinPool commonPool=new ForkJoinPool(8);
+        commonPool.commonPool().submit(()->
         IntStream.range(0, batches)
-                .parallel(8).forEach(i -> {
+                .parallel().forEach(i -> {
             int n = i * batchSize;
             int max = batchSize;
             for (int l = 0; l < max; ++l) {
@@ -85,9 +88,8 @@ public class TFIDFKeywordExtractor {
                     e.printStackTrace();
                 }
                 concurrentMap.put(current, s);
-
             }
-        });
+        })).get();
         List<List<String>> trueDocs = new ArrayList<>();
         for (int i = 0; i < concurrentMap.keySet().size(); ++i) {
             trueDocs.add(concurrentMap.get(i));
@@ -143,8 +145,10 @@ public class TFIDFKeywordExtractor {
         ConcurrentHashMap<Integer, Map<String, Double>> concurrentMap = new ConcurrentHashMap<>();
         int batches = (docs.size() / batchSize) + 1;
         ConcurrentHashMap<Integer, Map<String, Integer>> auxConcurrentMap = new ConcurrentHashMap<>();
-        IntStream.range(0, batches)
-                .parallel(8).forEach(i -> {
+        ForkJoinPool commonPool=new ForkJoinPool(8);
+        commonPool.commonPool().submit(()->
+                IntStream.range(0, batches)
+                .parallel().forEach(i -> {
             int n = i * batchSize;
             int max = batchSize;
             for (int l = 0; l < max; ++l) {
@@ -153,12 +157,13 @@ public class TFIDFKeywordExtractor {
                 List<String> doc = docs.get(current);
                 auxConcurrentMap.put(current, tf(doc));
             }
-        });
+        })).get();
         for (int i = 0; i < auxConcurrentMap.keySet().size(); ++i) {
             wordBag.add(auxConcurrentMap.get(i));
         }
-        IntStream.range(0, batches)
-                .parallel(8).forEach(i -> {
+        commonPool.commonPool().submit(()->
+                IntStream.range(0, batches)
+                .parallel().forEach(i -> {
             int n = i * batchSize;
             int max = batchSize;
             for (int l = 0; l < max; ++l) {
@@ -177,7 +182,7 @@ public class TFIDFKeywordExtractor {
                 concurrentMap.put(current, aux);
                 ++i;
             }
-        });
+        })).get();
         for (int i = 0; i < concurrentMap.keySet().size(); ++i) {
             tfidfComputed.add(concurrentMap.get(i));
         }

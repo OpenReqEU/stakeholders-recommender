@@ -1,7 +1,7 @@
 package upc.stakeholdersrecommender.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.landawn.abacus.util.stream.IntStream;
+import net.didion.jwnl.data.Exc;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.math3.util.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +21,8 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
+import java.util.stream.IntStream;
 
 import static java.lang.Double.max;
 
@@ -65,6 +67,7 @@ public class StakeholdersRecommenderService {
     }
 
     public List<RecommendReturnSchema> recommend(RecommendSchema request, int k, Boolean projectSpecific, String organization, Integer test) throws Exception {
+        verifyRecommend(request);
         String p = request.getProject().getId();
         List<RecommendReturnSchema> ret;
         List<PersonSR> persList = new ArrayList<>();
@@ -132,6 +135,12 @@ public class StakeholdersRecommenderService {
         Pair<PersonSimple, Double>[] bestPeople = computeBestStakeholders(clean, req, hours, k, projectSpecific);
         ret = prepareFinal(bestPeople, req);
         return ret;
+    }
+
+    private void verifyRecommend(RecommendSchema request) throws Exception {
+        if (request.getRequirement()==null) throw new Exception("Requirement in request is null");
+        if (request.getProject()==null) throw new Exception("Project in request is null");
+        if (request.getUser()==null) throw new Exception("User in request is null");
     }
 
     private List<PersonSR> removeRejected(List<PersonSR> persList, String user, String organization, String requirement) {
@@ -208,15 +217,21 @@ public class StakeholdersRecommenderService {
         ConcurrentHashMap<Integer, Pair<PersonSimple, Pair<Double, Double>>> concurrentMap = new ConcurrentHashMap<>();
         Set<String> reqSkills = req.getSkillsSet();
         List<String> component = req.getComponent();
+        List<PersonSimple> persSimpleList=new ArrayList<>();
+        for (int i=0;i<persList.size();++i) {
+            persSimpleList.add(new PersonSimple(persList.get(i)));
+        }
         int batches = (persList.size() / batchSize) + 1;
-        IntStream.range(0, batches)
-                .parallel(10).forEach(i -> {
+        ForkJoinPool commonPool=new ForkJoinPool(8);
+        commonPool.commonPool().submit(()->
+                IntStream.range(0, batches)
+                .parallel().forEach(i -> {
                     int n = i * batchSize;
                     int max = batchSize;
                     for (int l = 0; l < max; ++l) {
                         int current = n + l;
-                        if (current >= persList.size()) break;
-                        PersonSimple person = new PersonSimple(persList.get(current));
+                        if (current >= persSimpleList.size()) break;
+                        PersonSimple person = persSimpleList.get(current);
                         Double sum = 0.0;
                         Double compSum = 0.0;
                         Double resComp = 0.0;
@@ -246,8 +261,7 @@ public class StakeholdersRecommenderService {
                                     sum = sum + weightToAdd * mostSimilarSkill.getWeight();
                             }
                         }
-                        if (component != null) {
-                            if (person.getComponents() != null)
+                        if (component != null && person.getComponents()!=null) {
                                 for (String s : component) {
                                     for (Skill j : person.getComponents()) {
                                         if (s.equals(j.getName())) {
@@ -282,7 +296,7 @@ public class StakeholdersRecommenderService {
                         }
                     }
                 }
-        );
+        )).get();
         for (Integer i : new TreeSet<>(concurrentMap.keySet())) {
             valuesForSR.add(concurrentMap.get(i));
         }
@@ -487,12 +501,15 @@ public class StakeholdersRecommenderService {
     private void verify(BatchSchema request) throws Exception {
         Set<String> rec = new HashSet<>();
         for (Requirement r : request.getRequirements()) {
+            if (r.getId()==null) throw new Exception("Requirement id of a requirement in request is null");
+            if (r.getDescription()==null && r.getName()==null) throw new Exception("A requirement on the request has no name nor description");
             if (r.getId().length() > 255) throw new Exception("Requirement id exceeds character size of 255");
             if (rec.contains(r.getId())) throw new Exception("Requirement id " + r.getId() + " is repeated");
             rec.add(r.getId());
         }
         Set<String> proj = new HashSet<>();
         for (Project p : request.getProjects()) {
+            if (p.getId()==null) throw new Exception("Project if of a project is null in request");
             if (p.getId().length() > 255) throw new Exception("Project id exceeds character size of 255");
             if (proj.contains(p.getId())) throw new Exception("Project id " + p.getId() + " is repeated");
             for (String a : p.getSpecifiedRequirements())
@@ -501,11 +518,13 @@ public class StakeholdersRecommenderService {
         }
         Set<String> person = new HashSet<>();
         for (PersonMinimal p : request.getPersons()) {
+            if (p.getUsername()==null) throw new Exception("Username of a person in request is null");
             if (p.getUsername().length() > 255) throw new Exception("Requirement id exceeds character size of 255");
             if (person.contains(p.getUsername())) throw new Exception("Person id " + p.getUsername() + " is repeated");
             person.add(p.getUsername());
         }
         for (Responsible r : request.getResponsibles()) {
+            if (r.getPerson()==null || r.getRequirement()==null) throw new Exception("Person or requirement is null in a responsible in request");
             if (!rec.contains(r.getRequirement()))
                 throw new Exception("Person assigned to non-existent requirement " + r.getRequirement());
             if (!person.contains(r.getPerson()))
@@ -513,6 +532,7 @@ public class StakeholdersRecommenderService {
         }
         if (request.getParticipants() != null) {
             for (Participant p : request.getParticipants()) {
+                if (p.getPerson()==null || p.getProject()==null) throw new Exception("Person or project in a participant is null in request");
                 if (!person.contains(p.getPerson()))
                     throw new Exception("Project assigned to non-existent person " + p.getPerson());
                 if (!proj.contains(p.getProject()))
