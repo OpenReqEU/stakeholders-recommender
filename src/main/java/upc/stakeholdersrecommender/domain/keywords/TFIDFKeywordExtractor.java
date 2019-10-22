@@ -4,12 +4,15 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.custom.CustomAnalyzer;
 import upc.stakeholdersrecommender.domain.Requirement;
 import upc.stakeholdersrecommender.domain.TextPreprocessing;
+import upc.stakeholdersrecommender.service.StakeholdersRecommenderService;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.IntStream;
 
 
@@ -19,6 +22,7 @@ public class TFIDFKeywordExtractor {
     private ConcurrentHashMap<String, Integer> corpusFrequency = new ConcurrentHashMap<>();
     private TextPreprocessing text_preprocess = new TextPreprocessing();
     private int batchSize=1000;
+    Logger logger = Logger.getLogger(TFIDFKeywordExtractor.class.getName());
 
     public TFIDFKeywordExtractor(Double cutoff) {
         if (cutoff == -1.0) cutoffParameter = 4.0;
@@ -85,7 +89,7 @@ public class TFIDFKeywordExtractor {
                 try {
                     s = englishAnalyze(r.getDescription());
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    logger.log(Level.SEVERE,e.getMessage(),e);
                 }
                 concurrentMap.put(current, s);
             }

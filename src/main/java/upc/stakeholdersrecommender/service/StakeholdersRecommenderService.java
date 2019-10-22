@@ -22,6 +22,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.IntStream;
 
 import static java.lang.Double.max;
@@ -60,7 +62,7 @@ public class StakeholdersRecommenderService {
     private SkillExtractor SkillExtractor;
 
     private int batchSize=50;
-
+    Logger logger = Logger.getLogger(StakeholdersRecommenderService.class.getName());
 
     public static <E> E[] createArray(int length, E... elements) {
         return Arrays.copyOf(elements, length);
@@ -248,7 +250,7 @@ public class StakeholdersRecommenderService {
                                     try {
                                         val = WordEmbedding.computeSimilarity(j.getName(), s);
                                     } catch (IOException e) {
-                                        e.printStackTrace();
+                                        logger.log(Level.SEVERE,e.getMessage(),e);
                                     }
                                     if (val > weightToAdd) {
                                         weightToAdd = val;
@@ -282,7 +284,7 @@ public class StakeholdersRecommenderService {
                         try {
                             appropiateness = getAppropiateness(reqSkills, person, skillTrad);
                         } catch (IOException e) {
-                            e.printStackTrace();
+                            logger.log(Level.SEVERE,e.getMessage(),e);
                         }
                         res = res * 3 + person.getAvailability() + resComp * 10;
                         if ((projectSpecific && person.getAvailability() >= (hours / person.getHours())) && appropiateness != 0.0) {
