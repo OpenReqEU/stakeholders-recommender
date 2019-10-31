@@ -28,13 +28,21 @@ public class SkillExtractor {
     @Value("${skill.dropoff.days.unconsider}")
     private Double daysToUnconsider;
 
+    @Value("${Vogella.skill.dropoff.days}")
+    private Double dropoffDaysVogella;
+    @Value("${Vogella.skill.dropoff.max}")
+    private Double maxDropoffVogella;
+    @Value("${Vogella.skill.dropoff.days.unconsider}")
+    private Double daysToUnconsiderVogella;
+
+
 
     @Autowired
     private KeywordExtractionModelRepository KeywordExtractionModelRepository;
     @Autowired
     private PreprocessService Preprocess;
 
-    public Map<String, Map<String, Double>> obtainSkills(Map<String, Requirement> trueRecs, Boolean bugzilla, Boolean rake, String organization, Integer size, Integer test, Double selectivity) throws IOException {
+    public Map<String, Map<String, Double>> obtainSkills(Map<String, Requirement> trueRecs, Boolean bugzilla, Boolean rake, String organization, Integer size, Integer test, Double selectivity,Boolean vogella) throws IOException {
         Map<String, Map<String, Double>> map;
         if (rake) {
             map = new RAKEKeywordExtractor().computeRake(new ArrayList<>(trueRecs.values()));
@@ -44,7 +52,7 @@ public class SkillExtractor {
             for (Requirement r : toMakeSkill) {
                 trueRecs.put(r.getId(), r);
             }
-            map = computeAllSkillsNoMethod(trueRecs);
+            map = computeAllSkillsNoMethod(trueRecs,vogella);
         } else {
             Map<String, Integer> model = KeywordExtractionModelRepository.getOne(organization).getModel();
             map = new TFIDFKeywordExtractor(selectivity).computeTFIDFExtra(model, size, trueRecs);
@@ -56,7 +64,7 @@ public class SkillExtractor {
         return map;
     }
 
-    public Map<String, Map<String, Double>> computeAllSkillsNoMethod(Map<String, Requirement> recs) {
+    public Map<String, Map<String, Double>> computeAllSkillsNoMethod(Map<String, Requirement> recs,Boolean vogella) {
         Map<String, Map<String, Double>> ret = new HashMap<>();
         for (String s : recs.keySet()) {
             Requirement r = recs.get(s);
@@ -72,15 +80,15 @@ public class SkillExtractor {
             }
             ret.put(s, aux);
         }
-        return computeTimeFactor(recs, ret, new Date());
+        return computeTimeFactor(recs, ret, new Date(),vogella);
     }
 
-    public Map<String, Map<String, Double>> computeTime(Map<String, Map<String, Double>> skills, Map<String, Requirement> trueRecs) {
-        skills = computeTimeFactor(trueRecs, skills, new Date());
+    public Map<String, Map<String, Double>> computeTime(Map<String, Map<String, Double>> skills, Map<String, Requirement> trueRecs,Boolean vogella) {
+        skills = computeTimeFactor(trueRecs, skills, new Date(),vogella);
         return skills;
     }
 
-    public Map<String, Map<String, Double>> computeAllSkillsRequirement(Map<String, Requirement> recs, String organization, Double selectivity) throws IOException, ExecutionException, InterruptedException {
+    public Map<String, Map<String, Double>> computeAllSkillsRequirement(Map<String, Requirement> recs, String organization, Double selectivity,Boolean vogella) throws IOException, ExecutionException, InterruptedException {
         TFIDFKeywordExtractor extractor = new TFIDFKeywordExtractor(selectivity);
         //Extract map with (Requirement / KeywordValue)
         Map<String, Map<String, Double>> keywords = extractor.computeTFIDF(new ArrayList<>(recs.values()));
@@ -95,10 +103,18 @@ public class SkillExtractor {
         toSave.setId(organization);
         KeywordExtractionModelRepository.save(toSave);
         KeywordExtractionModelRepository.flush();
-        return computeTimeFactor(recs, keywords, dat);
+        return computeTimeFactor(recs, keywords, dat,vogella);
     }
 
-    public Map<String, Map<String, Double>> computeTimeFactor(Map<String, Requirement> recs, Map<String, Map<String, Double>> allComponents, Date dat) {
+    public Map<String, Map<String, Double>> computeTimeFactor(Map<String, Requirement> recs, Map<String, Map<String, Double>> allComponents, Date dat,Boolean vogella) {
+        Double daysUnconsider=daysToUnconsider;
+        Double dropoff=dropoffDays;
+        Double maxDrop=maxDropoff;
+        if (vogella) {
+            daysUnconsider=daysToUnconsiderVogella;
+            dropoff=dropoffDaysVogella;
+            maxDrop=maxDropoffVogella;
+        }
         Map<String, Map<String, Double>> scaledKeywords = new HashMap<>();
         for (String s : allComponents.keySet()) {
             Requirement req = recs.get(s);
@@ -107,9 +123,9 @@ public class SkillExtractor {
             Map<String, Double> aux = allComponents.get(s);
             Map<String, Double> helper = new HashMap<>();
             for (String j : aux.keySet()) {
-                if (daysToUnconsider == -1.0 || daysToUnconsider >= diffDays) {
-                    if (dropoffDays != -1.0)
-                        helper.put(j, min(1.0, 1.0 - min(maxDropoff, diffDays * (maxDropoff / dropoffDays))));
+                if (daysUnconsider == -1.0 || daysUnconsider >= diffDays) {
+                    if (dropoff != -1.0)
+                        helper.put(j, min(1.0, 1.0 - min(maxDrop, diffDays * (maxDrop / dropoff))));
                     else helper.put(j, 1.0);
                 }
             }
@@ -118,7 +134,7 @@ public class SkillExtractor {
         return scaledKeywords;
     }
 
-    public Map<String, Map<String, Double>> computeAllSkillsRequirementRAKE(Map<String, Requirement> recs, String organization) throws IOException {
+    public Map<String, Map<String, Double>> computeAllSkillsRequirementRAKE(Map<String, Requirement> recs, String organization,Boolean vogella) throws IOException {
         //Extract map with (Requirement / KeywordValue)
         Map<String, Map<String, Double>> keywords = new RAKEKeywordExtractor().computeRake(new ArrayList<>(recs.values()));
         Date dat = new Date();
@@ -127,7 +143,7 @@ public class SkillExtractor {
 
         //Skill factor is a linear function, dropping off lineally up to 0.5, based on the days
         //since the requirement was last touched
-        return computeTimeFactor(recs, keywords, dat);
+        return computeTimeFactor(recs, keywords, dat,vogella);
     }
 
 }

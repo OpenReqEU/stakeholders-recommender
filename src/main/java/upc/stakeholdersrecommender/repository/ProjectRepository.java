@@ -1,5 +1,7 @@
 package upc.stakeholdersrecommender.repository;
 
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.stereotype.Repository;
@@ -16,9 +18,11 @@ public interface ProjectRepository extends JpaRepository<ProjectSR, String> {
     void deleteByOrganization(String organization);
 
     @QueryHints({@QueryHint(name = "javax.persistence.lock.timeout", value = "50000")})
+    @Fetch(value = FetchMode.SELECT)
     ProjectSR findByOrganization(String organization);
 
     @QueryHints({@QueryHint(name = "javax.persistence.lock.timeout", value = "50000")})
+    @Fetch(value = FetchMode.SELECT)
     ProjectSR findById(ProjectSRId organization);
 
 

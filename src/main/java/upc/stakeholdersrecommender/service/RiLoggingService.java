@@ -27,7 +27,7 @@ public class RiLoggingService {
     @Autowired
     SkillExtractor skill;
 
-    public Pair<Map<String, Map<String, Double>>, Map<String, Map<String, Pair<Integer, Integer>>>> getUserLogging(Boolean bugzilla, Boolean rake, String organization, Integer size, Integer test, Double selectivity) throws GeneralSecurityException, IOException {
+    public Pair<Map<String, Map<String, Double>>, Map<String, Map<String, Pair<Integer, Integer>>>> getUserLogging(Boolean bugzilla, Boolean rake, String organization, Integer size, Integer test, Double selectivity,Boolean vogella) throws GeneralSecurityException, IOException {
         LogArray log = null;
         if (test == 0) {
             SslContextUtils.mergeWithSystem("cert/lets_encrypt.jks");
@@ -45,10 +45,10 @@ public class RiLoggingService {
             log = map.readValue(jsonInString, LogArray.class);
         }
 
-        return log(log.getLogs(), bugzilla, rake, organization, size, test, selectivity);
+        return log(log.getLogs(), bugzilla, rake, organization, size, test, selectivity,vogella);
     }
 
-    public Pair<Map<String, Map<String, Double>>, Map<String, Map<String, Pair<Integer, Integer>>>> log(List<Log> logList, Boolean bugzilla, Boolean rake, String organization, Integer size, Integer test, Double selectivity) throws IOException {
+    public Pair<Map<String, Map<String, Double>>, Map<String, Map<String, Pair<Integer, Integer>>>> log(List<Log> logList, Boolean bugzilla, Boolean rake, String organization, Integer size, Integer test, Double selectivity,Boolean vogella) throws IOException {
         Map<String, List<Log>> logged = new HashMap<>();
         if (logList != null)
             for (Log l : logList) {
@@ -109,8 +109,8 @@ public class RiLoggingService {
             trueRecs.put(s, req);
             reqId.put(s, toOrder);
         }
-        Map<String, Map<String, Double>> skills = skill.obtainSkills(trueRecs, bugzilla, rake, organization, size, test, selectivity);
-        skills = skill.computeTime(skills, trueRecs);
+        Map<String, Map<String, Double>> skills = skill.obtainSkills(trueRecs, bugzilla, rake, organization, size, test, selectivity,vogella);
+        skills = skill.computeTime(skills, trueRecs,vogella);
         return new Pair<>(skills, timesForReq);
     }
 

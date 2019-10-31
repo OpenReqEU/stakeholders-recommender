@@ -4,16 +4,13 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.custom.CustomAnalyzer;
 import upc.stakeholdersrecommender.domain.Requirement;
 import upc.stakeholdersrecommender.domain.TextPreprocessing;
-import upc.stakeholdersrecommender.service.StakeholdersRecommenderService;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ForkJoinPool;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.stream.IntStream;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 public class TFIDFKeywordExtractor {
@@ -21,8 +18,6 @@ public class TFIDFKeywordExtractor {
     private Double cutoffParameter; //This can be set to different values for different selectivity (more or less keywords)
     private ConcurrentHashMap<String, Integer> corpusFrequency = new ConcurrentHashMap<>();
     private TextPreprocessing text_preprocess = new TextPreprocessing();
-    private int batchSize=1000;
-    Logger logger = Logger.getLogger(TFIDFKeywordExtractor.class.getName());
 
     public TFIDFKeywordExtractor(Double cutoff) {
         if (cutoff == -1.0) cutoffParameter = 4.0;
@@ -53,7 +48,7 @@ public class TFIDFKeywordExtractor {
     }
 
     private double idf(Integer size, Integer frequency) {
-        return Math.log(size.doubleValue() / frequency.doubleValue() + 1.0);
+        return StrictMath.log(size.doubleValue() / frequency.doubleValue() + 1.0);
     }
 
     private List<String> analyze(String text, Analyzer analyzer) throws IOException {
@@ -73,34 +68,13 @@ public class TFIDFKeywordExtractor {
     }
 
     public Map<String, Map<String, Double>> computeTFIDF(List<Requirement> corpus) throws IOException, ExecutionException, InterruptedException {
-        ConcurrentHashMap<Integer, List<String>> concurrentMap = new ConcurrentHashMap<>();
-        int batches = (corpus.size() / batchSize) + 1;
-        ForkJoinPool commonPool=new ForkJoinPool(8);
-        commonPool.commonPool().submit(()->
-        IntStream.range(0, batches)
-                .parallel().forEach(i -> {
-            int n = i * batchSize;
-            int max = batchSize;
-            for (int l = 0; l < max; ++l) {
-                int current = n + l;
-                if (current >= corpus.size()) break;
-                Requirement r = corpus.get(current);
-                List<String> s = new ArrayList<>();
-                try {
-                    s = englishAnalyze(r.getDescription());
-                } catch (IOException e) {
-                    logger.log(Level.SEVERE,e.getMessage(),e);
-                }
-                concurrentMap.put(current, s);
-            }
-        })).get();
         List<List<String>> trueDocs = new ArrayList<>();
-        for (int i = 0; i < concurrentMap.keySet().size(); ++i) {
-            trueDocs.add(concurrentMap.get(i));
+        for (Requirement r : corpus) {
+            List<String> s = englishAnalyze(r.getDescription());
+            trueDocs.add(s);
         }
         List<Map<String, Double>> res = tfIdf(trueDocs);
-        int counter = 0;
-        return getStringMapMap(corpus, res, counter);
+        return getStringMapMap(corpus, res, 0);
 
     }
 
@@ -143,52 +117,25 @@ public class TFIDFKeywordExtractor {
     }
 
 
-    private List<Map<String, Double>> tfIdf(List<List<String>> docs) throws ExecutionException, InterruptedException {
+    private List<Map<String, Double>> tfIdf(List<List<String>> docs) {
         List<Map<String, Double>> tfidfComputed = new ArrayList<>();
         List<Map<String, Integer>> wordBag = new ArrayList<>();
-        ConcurrentHashMap<Integer, Map<String, Double>> concurrentMap = new ConcurrentHashMap<>();
-        int batches = (docs.size() / batchSize) + 1;
-        ConcurrentHashMap<Integer, Map<String, Integer>> auxConcurrentMap = new ConcurrentHashMap<>();
-        ForkJoinPool commonPool=new ForkJoinPool(8);
-        commonPool.commonPool().submit(()->
-                IntStream.range(0, batches)
-                .parallel().forEach(i -> {
-            int n = i * batchSize;
-            int max = batchSize;
-            for (int l = 0; l < max; ++l) {
-                int current = n + l;
-                if (current >= docs.size()) break;
-                List<String> doc = docs.get(current);
-                auxConcurrentMap.put(current, tf(doc));
-            }
-        })).get();
-        for (int i = 0; i < auxConcurrentMap.keySet().size(); ++i) {
-            wordBag.add(auxConcurrentMap.get(i));
+        for (List<String> doc : docs) {
+            wordBag.add(tf(doc));
         }
-        commonPool.commonPool().submit(()->
-                IntStream.range(0, batches)
-                .parallel().forEach(i -> {
-            int n = i * batchSize;
-            int max = batchSize;
-            for (int l = 0; l < max; ++l) {
-                int current = n + l;
-                if (current >= docs.size()) break;
-                HashMap<String, Double> aux = new HashMap<>();
-                List<String> doc = docs.get(current);
-                for (String s : new TreeSet<>(doc)) {
-                    Double idf = idf(docs.size(), corpusFrequency.get(s));
-                    Integer tf = wordBag.get(current).get(s);
-                    Double tfidf = idf * tf;
-                    if (tfidf >= cutoffParameter && s.length() > 1) {
-                        aux.put(s, tfidf);
-                    }
+        int counter = 0;
+        for (List<String> doc : docs) {
+            HashMap<String, Double> aux = new HashMap<>();
+            for (String s : new TreeSet<>(doc)) {
+                Double idf = idf(docs.size(), corpusFrequency.get(s));
+                Integer tf = wordBag.get(counter).get(s);
+                Double tfidf = idf * tf;
+                if (tfidf >= cutoffParameter && s.length() > 1) {
+                    aux.put(s, tfidf);
                 }
-                concurrentMap.put(current, aux);
-                ++i;
             }
-        })).get();
-        for (int i = 0; i < concurrentMap.keySet().size(); ++i) {
-            tfidfComputed.add(concurrentMap.get(i));
+            ++counter;
+            tfidfComputed.add(aux);
         }
         return tfidfComputed;
 
@@ -198,31 +145,13 @@ public class TFIDFKeywordExtractor {
         text = text_preprocess.text_preprocess(text);
         String result = "";
         if (text.contains("[")) {
-            String[] p = text.split("]\\[");
-            for (String f : p) {
-                if (f != null && f.length() > 0) {
-                    if (f.charAt(0) != '[') f = "[" + f;
-                    if (f.charAt(f.length() - 1) != ']') f = f.concat("]");
-                    String[] thing = f.split("\\[");
-                    if (thing.length > 1) {
-                        String[] help = thing[1].split("]");
-                        if (help.length > 0) {
-                            String[] badIdea = help[0].split(" ");
-                            String nice = "";
-                            for (String s : badIdea) {
-                                nice = nice.concat(s);
-                            }
-                            for (int i = 0; i < 10; ++i) {
-                                result = result.concat(" " + nice);
-                            }
-                        }
-                    }
-                }
+            Pattern p = Pattern.compile("\\[(.*?)\\]");
+            Matcher m = p.matcher(text);
+            while (m.find()) {
+                text = text + " " + m.group().toUpperCase();
             }
         }
-        String[] aux4 = text.split("]");
-        String[] aux2 = aux4[aux4.length - 1].split(" ");
-        for (String a : aux2) {
+        for (String a : text.split(" ")) {
             String helper = "";
             if (a.toUpperCase().equals(a)) {
                 for (int i = 0; i < 10; ++i) {

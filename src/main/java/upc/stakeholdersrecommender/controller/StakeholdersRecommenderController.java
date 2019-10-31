@@ -48,13 +48,13 @@ public class StakeholdersRecommenderController {
         Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         String s = formatter.format(new Date());
         System.out.println(s + " | Starting batch process from " + organization);
-        System.out.println("Processing "+batch.getRequirements().size()+" requeriments");
+        System.out.println("Processing " + batch.getRequirements().size() + " requeriments");
         int res = 0;
         try {
             res = stakeholdersRecommenderService.addBatch(batch, withAvailability, withComponent, organization, autoMapping, bugzilla, logging, 0, selectivity);
         } catch (IOException e) {
             s = formatter.format(new Date());
-            System.out.println(s + " | Finished batch process " + organization+" for "+organization);
+            System.out.println(s + " | Finished batch process " + organization + " for " + organization);
             return new ResponseEntity(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         if (!keywords) {
