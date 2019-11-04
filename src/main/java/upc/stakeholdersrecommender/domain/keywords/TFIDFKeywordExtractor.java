@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
 public class TFIDFKeywordExtractor {
 
     private Double cutoffParameter; //This can be set to different values for different selectivity (more or less keywords)
-    private ConcurrentHashMap<String, Integer> corpusFrequency = new ConcurrentHashMap<>();
+    private HashMap<String, Integer> corpusFrequency = new HashMap<>();
     private TextPreprocessing text_preprocess = new TextPreprocessing();
 
     public TFIDFKeywordExtractor(Double cutoff) {
@@ -165,11 +165,11 @@ public class TFIDFKeywordExtractor {
     }
 
 
-    public ConcurrentHashMap<String, Integer> getCorpusFrequency() {
+    public HashMap<String, Integer> getCorpusFrequency() {
         return corpusFrequency;
     }
 
-    public void setCorpusFrequency(ConcurrentHashMap<String, Integer> corpusFrequency) {
+    public void setCorpusFrequency(HashMap<String, Integer> corpusFrequency) {
         this.corpusFrequency = corpusFrequency;
     }
 

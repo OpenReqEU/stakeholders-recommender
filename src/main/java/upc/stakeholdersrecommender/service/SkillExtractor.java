@@ -97,7 +97,7 @@ public class SkillExtractor {
 
         //Skill factor is a linear function, dropping off lineally up to maxDropoff, based on the days
         //since the requirement was last touched
-        ConcurrentHashMap<String, Integer> mod = extractor.getCorpusFrequency();
+        HashMap<String, Integer> mod = extractor.getCorpusFrequency();
         KeywordExtractionModel toSave = new KeywordExtractionModel();
         toSave.setModel(mod);
         toSave.setId(organization);

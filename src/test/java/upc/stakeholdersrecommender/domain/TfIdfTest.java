@@ -63,7 +63,7 @@ public class TfIdfTest {
         }
         keywordExtractor.computeTFIDF(reqList);
 
-        ConcurrentHashMap<String,Integer> model=keywordExtractor.getCorpusFrequency();
+        HashMap<String,Integer> model=keywordExtractor.getCorpusFrequency();
         TypeReference<HashMap<String, Integer>> typeRef
                 = new TypeReference<HashMap<String, Integer>>() {};
         Requirement req=new Requirement();
@@ -93,9 +93,7 @@ public class TfIdfTest {
         }
         keywordExtractor.computeTFIDF(reqList);
 
-        ConcurrentHashMap<String,Integer> model=keywordExtractor.getCorpusFrequency();
-        TypeReference<HashMap<String, Integer>> typeRef
-                = new TypeReference<HashMap<String, Integer>>() {};
+        HashMap<String,Integer> model=keywordExtractor.getCorpusFrequency();
         Map<String,Requirement> mappy=new HashMap<>();
         Requirement req=new Requirement();
         req.setName("I am a requirement");
