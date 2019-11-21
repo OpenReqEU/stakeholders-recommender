@@ -22,6 +22,13 @@ public class EffortCalculator {
     @Autowired
     EffortRepository effortRepository;
 
+    /**
+     * Computer the effort to hour ratio for the specified project from the specified organization
+     * @param id Project id
+     * @param organization Organization that made the original request
+     * @param eff Effort to hour conversion value
+     */
+
     public void effortCalc(EffortCalculatorSchema eff, String id, String organization) {
         if (effortRepository.findById(new ProjectSRId(id, organization)) != null) {
             effortRepository.deleteById(new ProjectSRId(id, organization));
@@ -53,6 +60,14 @@ public class EffortCalculator {
         effort.setId(new ProjectSRId(id, organization));
         effortRepository.save(effort);
     }
+
+
+    /**
+     * Sets the effort to hour ratio for the specified project from the specified organization
+     * @param id Project id
+     * @param organization Organization that made the original request
+     * @param set Effort to hour conversion value
+     */
 
     public void setEffort(SetEffortSchema set, String id, String organization) {
         if (effortRepository.findById(new ProjectSRId(id, organization)) != null) {

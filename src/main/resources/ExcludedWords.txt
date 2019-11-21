@@ -784,6 +784,9 @@ couldnt
 date
 didn't
 doesn't
+doesnt
+isnt
+wont
 don't
 down
 due
@@ -1072,3 +1075,7 @@ don
 out
 only
 what
+e.g
+doesn
+de
+re

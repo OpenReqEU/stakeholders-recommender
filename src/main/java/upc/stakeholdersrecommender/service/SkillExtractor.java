@@ -11,8 +11,8 @@ import upc.stakeholdersrecommender.entity.KeywordExtractionModel;
 import upc.stakeholdersrecommender.repository.KeywordExtractionModelRepository;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -36,13 +36,24 @@ public class SkillExtractor {
     private Double daysToUnconsiderVogella;
 
 
-
     @Autowired
     private KeywordExtractionModelRepository KeywordExtractionModelRepository;
     @Autowired
     private PreprocessService Preprocess;
 
-    public Map<String, Map<String, Double>> obtainSkills(Map<String, Requirement> trueRecs, Boolean bugzilla, Boolean rake, String organization, Integer size, Integer test, Double selectivity,Boolean vogella) throws IOException {
+    /**
+     * Obtains the skills of the given parameters, with the appropiate algorithm to extract these
+     * the algorithm can be RAKE, Tf-Idf, or no algorithm
+     * @param trueRecs Map compromised of <Stakeholder, Requirements_done_by_stakeholder>
+     * @param bugzilla Boolean identifying whether RAKE is to be used
+     * @param organization String identifying the organization making this request
+     * @param size Amount of unique requirements that exist
+     * @param test Only to be used for mock tests, ignored for any other case
+     * @param selectivity Value to be used for keyword discrimination in Tf-Idf keyword extraction
+     * @param vogella Boolean identifying whether Vogella is making this request or not
+     * @return  Map of maps, compromised by <Stakeholder, <Skill,Skill_value> >
+     */
+    public Map<String, Map<String, Double>> obtainSkills(Map<String, Requirement> trueRecs, Boolean bugzilla, Boolean rake, String organization, Integer size, Integer test, Double selectivity, Boolean vogella,Clock clock) throws IOException {
         Map<String, Map<String, Double>> map;
         if (rake) {
             map = new RAKEKeywordExtractor().computeRake(new ArrayList<>(trueRecs.values()));
@@ -52,7 +63,7 @@ public class SkillExtractor {
             for (Requirement r : toMakeSkill) {
                 trueRecs.put(r.getId(), r);
             }
-            map = computeAllSkillsNoMethod(trueRecs,vogella);
+            map = computeAllSkillsNoMethod(trueRecs, vogella, clock);
         } else {
             Map<String, Integer> model = KeywordExtractionModelRepository.getOne(organization).getModel();
             map = new TFIDFKeywordExtractor(selectivity).computeTFIDFExtra(model, size, trueRecs);
@@ -64,7 +75,14 @@ public class SkillExtractor {
         return map;
     }
 
-    public Map<String, Map<String, Double>> computeAllSkillsNoMethod(Map<String, Requirement> recs,Boolean vogella) {
+    /**
+     * Obtains the skills of the given parameters, with no underlying keyword extraction algorithm
+     * @param recs Map compromised of <Stakeholder, Requirements_done_by_stakeholder>
+     * @param vogella Boolean identifying whether Vogella is making this request or not
+     * @return  Map of maps, compromised by <Stakeholder, <Skill,Skill_value> >
+     */
+
+    public Map<String, Map<String, Double>> computeAllSkillsNoMethod(Map<String, Requirement> recs, Boolean vogella,Clock clock) {
         Map<String, Map<String, Double>> ret = new HashMap<>();
         for (String s : recs.keySet()) {
             Requirement r = recs.get(s);
@@ -80,19 +98,21 @@ public class SkillExtractor {
             }
             ret.put(s, aux);
         }
-        return computeTimeFactor(recs, ret, new Date(),vogella);
+        return computeTimeFactor(recs, ret, clock, vogella);
     }
 
-    public Map<String, Map<String, Double>> computeTime(Map<String, Map<String, Double>> skills, Map<String, Requirement> trueRecs,Boolean vogella) {
-        skills = computeTimeFactor(trueRecs, skills, new Date(),vogella);
-        return skills;
-    }
-
-    public Map<String, Map<String, Double>> computeAllSkillsRequirement(Map<String, Requirement> recs, String organization, Double selectivity,Boolean vogella) throws IOException, ExecutionException, InterruptedException {
+    /**
+     * Tf-Idf extraction of skills
+     * @param recs Map compromised of <Stakeholder, Requirements_done_by_stakeholder>
+     * @param vogella Boolean identifying whether Vogella is making this request or not
+     * @param selectivity Selectivity factor for Tf-Idf keyword discrimination
+     * @param organization Organization making this request
+     * @return  Map of maps, compromised by <Stakeholder, <Skill,Skill_value> >
+     */
+    public Map<String, Map<String, Double>> computeAllSkillsRequirement(Map<String, Requirement> recs, String organization, Double selectivity, Boolean vogella,Clock clock) throws IOException, ExecutionException, InterruptedException {
         TFIDFKeywordExtractor extractor = new TFIDFKeywordExtractor(selectivity);
         //Extract map with (Requirement / KeywordValue)
         Map<String, Map<String, Double>> keywords = extractor.computeTFIDF(new ArrayList<>(recs.values()));
-        Date dat = new Date();
         //Transform the map from (Requirement / KeywordValue) to (Requirement / SkillFactor)
 
         //Skill factor is a linear function, dropping off lineally up to maxDropoff, based on the days
@@ -103,22 +123,31 @@ public class SkillExtractor {
         toSave.setId(organization);
         KeywordExtractionModelRepository.save(toSave);
         KeywordExtractionModelRepository.flush();
-        return computeTimeFactor(recs, keywords, dat,vogella);
+        return computeTimeFactor(recs, keywords, clock, vogella);
     }
 
-    public Map<String, Map<String, Double>> computeTimeFactor(Map<String, Requirement> recs, Map<String, Map<String, Double>> allComponents, Date dat,Boolean vogella) {
-        Double daysUnconsider=daysToUnconsider;
-        Double dropoff=dropoffDays;
-        Double maxDrop=maxDropoff;
+    /**
+     * Computation of skill value degradation in regards to time, if Vogella is making this request, its default settings are overwritten
+     * @param recs Map compromised of <Stakeholder, Requirements_done_by_stakeholder>
+     * @param vogella Boolean identifying whether Vogella is making this request or not
+     * @param allComponents Map compromised of <Stakeholder, <Skill,Skill_value>>
+     * @param dat Time of the request
+     * @return  Weighted skill map of maps, compromised by <Stakeholder, <Skill,Skill_value> >
+     */
+
+    public Map<String, Map<String, Double>> computeTimeFactor(Map<String, Requirement> recs, Map<String, Map<String, Double>> allComponents, Clock dat, Boolean vogella) {
+        Double daysUnconsider = daysToUnconsider;
+        Double dropoff = dropoffDays;
+        Double maxDrop = maxDropoff;
         if (vogella) {
-            daysUnconsider=daysToUnconsiderVogella;
-            dropoff=dropoffDaysVogella;
-            maxDrop=maxDropoffVogella;
+            daysUnconsider = daysToUnconsiderVogella;
+            dropoff = dropoffDaysVogella;
+            maxDrop = maxDropoffVogella;
         }
         Map<String, Map<String, Double>> scaledKeywords = new HashMap<>();
         for (String s : allComponents.keySet()) {
             Requirement req = recs.get(s);
-            long diffInMillies = Math.abs(dat.getTime() - req.getModified().getTime());
+            long diffInMillies = Math.abs(dat.millis() - req.getModified().getTime());
             long diffDays = TimeUnit.DAYS.convert(diffInMillies, TimeUnit.MILLISECONDS);
             Map<String, Double> aux = allComponents.get(s);
             Map<String, Double> helper = new HashMap<>();
@@ -134,16 +163,20 @@ public class SkillExtractor {
         return scaledKeywords;
     }
 
-    public Map<String, Map<String, Double>> computeAllSkillsRequirementRAKE(Map<String, Requirement> recs, String organization,Boolean vogella) throws IOException {
+    /**
+     * Implementation of skill extraction with RAKE algorithm
+     * @param recs Map compromised of <Stakeholder, Requirements_done_by_stakeholder>
+     * @param vogella Boolean identifying whether Vogella is making this request or not
+     * @return  Map of maps, compromised by <Stakeholder, <Skill,Skill_value> >
+     */
+    public Map<String, Map<String, Double>> computeAllSkillsRequirementRAKE(Map<String, Requirement> recs, Boolean vogella,Clock clock) throws IOException {
         //Extract map with (Requirement / KeywordValue)
         Map<String, Map<String, Double>> keywords = new RAKEKeywordExtractor().computeRake(new ArrayList<>(recs.values()));
-        Date dat = new Date();
-
         //Transform the map from (Requirement / KeywordValue) to (Requirement / SkillFactor)
 
         //Skill factor is a linear function, dropping off lineally up to 0.5, based on the days
         //since the requirement was last touched
-        return computeTimeFactor(recs, keywords, dat,vogella);
+        return computeTimeFactor(recs, keywords, clock, vogella);
     }
 
 }

@@ -1,6 +1,5 @@
 package upc.stakeholdersrecommender.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oneandone.compositejks.SslContextUtils;
 import org.apache.commons.io.FileUtils;
@@ -12,6 +11,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import upc.stakeholdersrecommender.domain.LoggingInformation;
 import upc.stakeholdersrecommender.domain.Requirement;
 import upc.stakeholdersrecommender.domain.rilogging.Log;
 import upc.stakeholdersrecommender.domain.rilogging.LogArray;
@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.time.Clock;
 import java.util.*;
 
 @Service
@@ -27,7 +28,18 @@ public class RiLoggingService {
     @Autowired
     SkillExtractor skill;
 
-    public Pair<Map<String, Map<String, Double>>, Map<String, Map<String, Pair<Integer, Integer>>>> getUserLogging(Boolean bugzilla, Boolean rake, String organization, Integer size, Integer test, Double selectivity,Boolean vogella) throws GeneralSecurityException, IOException {
+    /**
+     * Calls the logging service, and obtains the logging information
+     * @param bugzilla Whether external keyword extraction is used
+     * @param rake Whether RAKE algorithm is used for keyword extraction
+     * @param organization Organization that made the original request
+     * @param size Total amount of unique requirements
+     * @param test Whether this is to be used for a mock test, unless testing, ignore
+     * @param selectivity Tf-Idf keyword discrimination value
+     * @param vogella Whether vogella is making this request
+     * @return  The logging information
+     */
+    public LoggingInformation getUserLogging(Boolean bugzilla, Boolean rake, String organization, Integer size, Integer test, Double selectivity, Boolean vogella,Clock clock) throws GeneralSecurityException, IOException {
         LogArray log = null;
         if (test == 0) {
             SslContextUtils.mergeWithSystem("cert/lets_encrypt.jks");
@@ -45,10 +57,24 @@ public class RiLoggingService {
             log = map.readValue(jsonInString, LogArray.class);
         }
 
-        return log(log.getLogs(), bugzilla, rake, organization, size, test, selectivity,vogella);
+        return log(log.getLogs(), bugzilla, rake, organization, size, test, selectivity, vogella,clock);
     }
 
-    public Pair<Map<String, Map<String, Double>>, Map<String, Map<String, Pair<Integer, Integer>>>> log(List<Log> logList, Boolean bugzilla, Boolean rake, String organization, Integer size, Integer test, Double selectivity,Boolean vogella) throws IOException {
+    /**
+     * Obtains the stakeholders who viewed or edited requirements, gives them their logs, then obtains the times for these logs that
+     * each stakeholder used to edit or view
+     * @param logList List of all logs obtained by calling the service
+     * @param bugzilla Whether external keyword extraction is used
+     * @param rake Whether RAKE algorithm is used for keyword extraction
+     * @param organization Organization that made the original request
+     * @param size Total amount of unique requirements
+     * @param test Whether this is to be used for a mock test, unless testing, ignore
+     * @param selectivity Tf-Idf keyword discrimination value
+     * @param vogella Whether vogella is making this request
+     * @return  The logging information
+     */
+
+    public LoggingInformation log(List<Log> logList, Boolean bugzilla, Boolean rake, String organization, Integer size, Integer test, Double selectivity, Boolean vogella,Clock clock) throws IOException {
         Map<String, List<Log>> logged = new HashMap<>();
         if (logList != null)
             for (Log l : logList) {
@@ -109,14 +135,18 @@ public class RiLoggingService {
             trueRecs.put(s, req);
             reqId.put(s, toOrder);
         }
-        Map<String, Map<String, Double>> skills = skill.obtainSkills(trueRecs, bugzilla, rake, organization, size, test, selectivity,vogella);
-        skills = skill.computeTime(skills, trueRecs,vogella);
-        return new Pair<>(skills, timesForReq);
+        Map<String, Map<String, Double>> skills = skill.obtainSkills(trueRecs, bugzilla, rake, organization, size, test, selectivity, vogella,clock);
+        skills = skill.computeTimeFactor(trueRecs, skills, Clock.systemDefaultZone(), vogella);
+        return new LoggingInformation(skills, timesForReq);
     }
 
+    /**
+     * Obtains the editing and viewing times of each requirement
+     * @param toOrder Logs obtained by logging pertaining to a certain stakeholder
+     * @return  Map compromised of <RequirementId,<TimeEdited,TimeViewed>>
+     */
 
-    private Map<String, Pair<Integer, Integer>> extractTimeInRequirement(List<Log> toOrder) throws JsonProcessingException {
-        String currentSessionId = "";
+    private Map<String, Pair<Integer, Integer>> extractTimeInRequirement(List<Log> toOrder)  {
         String lastElement = "";
         String lastType = "";
         String lastValue = "";
@@ -124,8 +154,6 @@ public class RiLoggingService {
         Integer lastTime = 0;
         Map<String, Pair<Integer, Integer>> toRet = new HashMap<>();
         for (Log l : toOrder) {
-            //String newSessionId=l.getHeader().getSessionid();
-            // if (currentSessionId.equals(newSessionId)) {
             String newType = l.getEvent_type();
             if ((lastElement.equals(l.getBody().getSrcElementclassName()) || (lastElement.equals("note-editable") && l.getBody().getSrcElementclassName().equals("note-editable or-description-active"))
                     || (lastElement.equals("note-editable or-description-active") && l.getBody().getSrcElementclassName().equals("note-editable"))) && lastType.equals("focus") && newType.equals("blur")) {
@@ -143,7 +171,6 @@ public class RiLoggingService {
                         toRet.put(l.getBody().getRequirementId(), new Pair<>(0, time));
                     }
                 }
-                //   }
             }
             lastTime = l.getUnixTime();
             lastType = l.getEvent_type();
@@ -154,6 +181,13 @@ public class RiLoggingService {
         return toRet;
     }
 
+    /**
+     * Whether this requirement was edited or simply viewed
+     * @param lastValue Last value taken by this requirement
+     * @param lastInnerText Last innerText taken by this requirement
+     * @param l Current log being examined
+     * @return  Whether this requirement was edited or viewed
+     */
     private boolean edited(String lastValue, String lastInnerText, Log l) {
         if (l.getBody().getSrcElementclassName().equals("select-dropdown")) {
             return true;

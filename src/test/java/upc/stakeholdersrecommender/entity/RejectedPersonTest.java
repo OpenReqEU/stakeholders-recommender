@@ -36,12 +36,12 @@ public class RejectedPersonTest {
     @Test
     public void testSetRejectedPerson() {
         System.out.println("rejectedPerson");
-        RejectedPersonId rej=new RejectedPersonId();
+        RejectedPersonId rej = new RejectedPersonId();
         rej.setOrganizationId("Org");
         rej.setPersonId("Per");
         RejectedPerson instance = new RejectedPerson(rej);
         assertEquals("Org", instance.getOrganization());
-        assertEquals("Per",instance.getUser().getPersonId());
+        assertEquals("Per", instance.getUser().getPersonId());
     }
 
     @Test

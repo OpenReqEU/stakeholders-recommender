@@ -18,6 +18,12 @@ public class PreprocessService {
     public PreprocessService() {
     }
 
+    /**
+     * Calls the external keyword extraction service
+     * @param requirements Requirements to send to the service
+     * @param test Only used for mock testing, ignore if not testing
+     * @return Returns a list of requirements, with their descriptions being entirely keywords identified by the service
+     */
     public List<Requirement> preprocess(List<Requirement> requirements, Integer test) throws IOException {
         List<Requirement> result = new ArrayList<>();
         if (test == 0) {
@@ -38,7 +44,7 @@ public class PreprocessService {
             }
             toSend.setRequirements(aux);
             RestTemplate temp = new RestTemplate();
-            RequirementPreprocessedList res = temp.postForObject("http://217.172.12.199:9406/keywords-extraction/requirements?stemmer=false", toSend, RequirementPreprocessedList.class);
+            RequirementPreprocessedList res = temp.postForObject("https://217.172.12.199:9406/keywords-extraction/requirements?stemmer=false", toSend, RequirementPreprocessedList.class);
             for (RequirementPreprocessed r : res.getRequirements()) {
                 Requirement re = reqMap.get(r.getId());
                 re.setDescription(r.getDescription());
@@ -59,7 +65,12 @@ public class PreprocessService {
         return result;
     }
 
-
+    /**
+     * Calls the external keyword extraction service for a single requirement
+     * @param requirement Requirement to send to the service
+     * @param test Only used for mock testing, ignore if not testing
+     * @return Returns a list of strings, representing the requirement's keywords
+     */
     public List<String> preprocessSingular(Requirement requirement, Integer test) throws IOException {
         RequirementPreprocessList toSend = new RequirementPreprocessList();
         List<RequirementPreprocess> aux = new ArrayList<>();
@@ -76,7 +87,7 @@ public class PreprocessService {
         RestTemplate temp = new RestTemplate();
         List<String> result = new ArrayList<>();
         if (test == 0 || test == 1) {
-            RequirementPreprocessedList res = temp.postForObject("http://217.172.12.199:9406/keywords-extraction/requirements?stemmer=false", toSend, RequirementPreprocessedList.class);
+            RequirementPreprocessedList res = temp.postForObject("https://217.172.12.199:9406/keywords-extraction/requirements?stemmer=false", toSend, RequirementPreprocessedList.class);
             List<RequirementPreprocessed> re = res.getRequirements();
             RequirementPreprocessed processed = re.get(0);
             for (String j : processed.getDescription().split(" ")) {

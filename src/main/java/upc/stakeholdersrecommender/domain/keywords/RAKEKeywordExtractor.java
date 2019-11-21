@@ -19,7 +19,15 @@ public class RAKEKeywordExtractor {
     private Double cutoff = 3.0;
     private TextPreprocessing preprocess = new TextPreprocessing();
 
-    public static List<String> getAnalyzedStrings(String text, Analyzer analyzer, List<String> result) throws IOException {
+
+    /**
+     * Passes the text through Lucene's token analyzer
+     * @param text Text to clean
+     * @param analyzer Analyzer to use
+     * @return Returns a cleaned list of strings
+     */
+    public static List<String> getAnalyzedStrings(String text, Analyzer analyzer) throws IOException {
+        List<String> result=new ArrayList<>();
         TokenStream tokenStream = analyzer.tokenStream(null, new StringReader(text));
         CharTermAttribute attr = tokenStream.addAttribute(CharTermAttribute.class);
         tokenStream.reset();
@@ -29,6 +37,12 @@ public class RAKEKeywordExtractor {
         return result;
     }
 
+
+    /**
+     * Extracts keywords using RAKE algorithm from a given corpus
+     * @param corpus Corpus to be used for RAKE
+     * @return Returns a list of maps, compromised of <word,rake_value>
+     */
     public List<Map<String, Double>> extractKeywords(List<String> corpus) throws IOException {
         List<Map<String, Double>> res = new ArrayList<>();
         Rake rake = new Rake();
@@ -53,7 +67,12 @@ public class RAKEKeywordExtractor {
         return res;
     }
 
-    public List<String> computeTFIDFSingular(Requirement req) throws IOException {
+    /**
+     * Extracts keywords using RAKE algorithm from a single requirement
+     * @param req Requirement to be analyzed
+     * @return Returns a list of strings who had a RAKE value higher than cutoff
+     */
+    public List<String> computeRakeSingular(Requirement req) throws IOException {
         Rake rake = new Rake();
         String text = "";
         for (String k : RAKEanalyzeNoStopword(req.getDescription())) {
@@ -69,16 +88,26 @@ public class RAKEKeywordExtractor {
         return RAKEanalyze(text);
     }
 
+
+    /**
+     * Extracts skills using RAKE algorithm
+     * @param corpus Requirement corpus to be analyzed
+     * @return Returns a map of maps, compromised by <Requirement_id, <Word,RAKE_value>>
+     */
     public Map<String, Map<String, Double>> computeRake(List<Requirement> corpus) throws IOException {
         List<String> docs = new ArrayList<>();
         for (Requirement r : corpus) {
             docs.add(r.getDescription());
         }
         List<Map<String, Double>> res = extractKeywords(docs);
-        int counter = 0;
-        return TFIDFKeywordExtractor.getStringMapMap(corpus, res, counter);
+        return TFIDFKeywordExtractor.getStringMapMap(corpus, res);
     }
 
+    /**
+     * Cleans text
+     * @param text Text to clean
+     * @return Returns a cleaned list of strings
+     */
     List<String> RAKEanalyze(String text) throws IOException {
         text = preprocess.text_preprocess(text);
         Analyzer analyzer = CustomAnalyzer.builder()
@@ -87,21 +116,21 @@ public class RAKEKeywordExtractor {
                 .addTokenFilter("stop")
                 .addTokenFilter("kstem")
                 .build();
-        return analyze(text, analyzer);
+        return getAnalyzedStrings(text, analyzer);
     }
 
+    /**
+     * Cleans text for RAKE algorithm to use
+     * @param text Text to clean
+     * @return Returns a cleaned list of strings
+     */
     List<String> RAKEanalyzeNoStopword(String text) throws IOException {
         Analyzer analyzer = CustomAnalyzer.builder()
                 .withTokenizer("standard")
                 .addTokenFilter("lowercase")
                 .addTokenFilter("kstem")
                 .build();
-        return analyze(text, analyzer);
-    }
-
-    List<String> analyze(String text, Analyzer analyzer) throws IOException {
-        List<String> result = new ArrayList<>();
-        return getAnalyzedStrings(text, analyzer, result);
+        return getAnalyzedStrings(text, analyzer);
     }
 
 }

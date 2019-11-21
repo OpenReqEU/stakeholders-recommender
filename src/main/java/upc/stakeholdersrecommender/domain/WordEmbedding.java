@@ -1,67 +1,58 @@
 package upc.stakeholdersrecommender.domain;
 
 
+import de.jungblut.glove.GloveRandomAccessReader;
+import de.jungblut.glove.impl.GloveBinaryRandomAccessReader;
+import de.jungblut.math.DoubleVector;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static java.lang.Math.sqrt;
 
 @Service
 public class WordEmbedding {
 
-    ConcurrentHashMap<String, Double[]> model = loadPureModel();
+    GloveRandomAccessReader db = new GloveBinaryRandomAccessReader(Paths.get("gloveModel"));
 
     public WordEmbedding() throws IOException {
     }
 
-    private ConcurrentHashMap<String, Double[]> loadPureModel() throws IOException {
-        Path p = Paths.get("GloVe_model/glove.6B.50d.txt");
-        String h = new String(Files.readAllBytes(p));
-        return loadModel(h);
-    }
 
+    /**
+     * Computes the cosine similarity between two words, if these vectors exist in the underlying Glove model
+     * @param  a first word
+     * @param  b second word
+     * @return  The cosine similarity between the two words
+     */
     public Double computeSimilarity(String a, String b) throws IOException {
-        Double[] help1 = null, help2 = null;
-        if (model.containsKey(a)) help1 = model.get(a);
-        if (model.containsKey(b)) help2 = model.get(b);
+        DoubleVector help1 = null, help2 = null;
+        if (db.contains(a)) help1 = db.get(a);
+        if (db.contains(b)) help2 = db.get(b);
         if (help1 != null && help2 != null) {
-            return cosineSimilarity(help1, help2);
+            return cosineSimilarity(help1,help2);
         } else return -1.0;
     }
 
-    private Double cosineSimilarity(Double[] help1, Double[] help2) {
-        Double sum = 0.0;
-        for (int i = 0; i < help1.length; ++i) {
-            sum += help1[i] * help2[i];
-        }
-        return sum / (norm(help1) * norm(help2));
-    }
 
-    private Double norm(Double[] array) {
+    private Double cosineSimilarity(DoubleVector help1, DoubleVector help2) {
+        double[] one=help1.toArray();
+        double[] two=help2.toArray();
+        int length=one.length;
+        Double sum = 0.0;
+        if (two.length>length) length=two.length;
+        for (int i=0;i<length;++i) {
+            sum += one[i] * two[i];
+        }
+        return sum / (norm(one) * norm(two));
+    }
+    private Double norm(double[] array) {
         Double tot = 0.0;
         for (Double d : array) {
             tot += d * d;
         }
         return sqrt(tot);
-    }
-
-    private ConcurrentHashMap<String, Double[]> loadModel(String h) {
-        ConcurrentHashMap<String, Double[]> map = new ConcurrentHashMap<>();
-        String[] help = h.split("\n");
-        for (String a : help) {
-            String[] l = a.split(" ");
-            Double[] aux = new Double[l.length - 1];
-            for (int i = 1; i < l.length; ++i) {
-                aux[i - 1] = Double.parseDouble(l[i]);
-            }
-            map.put(l[0], aux);
-        }
-        return map;
     }
 
 }

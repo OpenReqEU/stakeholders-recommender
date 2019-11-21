@@ -16,6 +16,7 @@ import upc.stakeholdersrecommender.service.StakeholdersRecommenderService;
 import java.io.IOException;
 import java.text.Format;
 import java.text.SimpleDateFormat;
+import java.time.Clock;
 import java.util.Date;
 import java.util.List;
 
@@ -42,7 +43,7 @@ public class StakeholdersRecommenderController {
                                    @RequestParam Boolean autoMapping, @ApiParam(value = "If set to true, the endpoint returns each requirement with its set of keywords instead of its normal return object.", example = "false", required = false, defaultValue = "false")
                                    @RequestParam(value = "keywords", defaultValue = "false", required = false) Boolean keywords, @ApiParam(value = "Whether a specific separate text preprocessor is used", example = "true", required = false) @RequestParam(value = "keywordPreprocessing", defaultValue = "false", required = false) Boolean bugzilla,
                                    @ApiParam(value = "Whether OpenReq Live logging is taken into account", example = "false", required = false) @RequestParam(value = "logging", defaultValue = "false", required = false) Boolean logging,
-                                   @ApiParam(value = "Keyword selectivity factor, higher means less, only used if more than 100 requirements, and no specific keyword tool is specified", example = "3", required = false) @RequestParam(value = "selectivityFactor", defaultValue = "-1", required = false) Double selectivity) throws Exception {
+                                   @ApiParam(value = "Keyword selectivity factor, higher means less, only used if more than 100 requirements, and no specific keyword tool is specified", example = "4", required = false) @RequestParam(value = "selectivityFactor", defaultValue = "-1", required = false) Double selectivity) throws Exception {
 
 
         Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
@@ -51,7 +52,7 @@ public class StakeholdersRecommenderController {
         System.out.println("Processing " + batch.getRequirements().size() + " requeriments");
         int res = 0;
         try {
-            res = stakeholdersRecommenderService.addBatch(batch, withAvailability, withComponent, organization, autoMapping, bugzilla, logging, 0, selectivity);
+            res = stakeholdersRecommenderService.addBatch(batch, withAvailability, withComponent, organization, autoMapping, bugzilla, logging, 0, selectivity,Clock.systemDefaultZone());
         } catch (IOException e) {
             s = formatter.format(new Date());
             System.out.println(s + " | Finished batch process " + organization + " for " + organization);
@@ -69,7 +70,7 @@ public class StakeholdersRecommenderController {
         }
     }
 
-    @RequestMapping(value = "reject_recommendation", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "reject_recommendation", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "This endpoint is used to state that the user identied by REJECTED must not be recommended for REQUIREMENT if USER performs the recommendation for REQUIREMENT.", notes = "")
     public ResponseEntity recommendReject(@ApiParam(value = "Id of the person who is rejected.", example = "Not JohnDoe", required = true) @RequestParam("rejected") String rejected, @ApiParam(value = "Id of the person who makes the rejection.", example = "JohnDoe", required = true) @RequestParam("user") String user, @ApiParam(value = "Id of the requirement from which the person REJECTED is rejected.", example = "1", required = true) @RequestParam("requirement") String requirement
             , @ApiParam(value = "The organization that is making the request.", example = "UPC", required = true) @RequestParam String organization) {
@@ -97,32 +98,32 @@ public class StakeholdersRecommenderController {
     }
 
     @RequestMapping(value = "setEffort", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
-    @ApiOperation(value = "Set the mapping of effort points to hours for an specific project. The effort points go in a scale from 1 to 5.", notes = "")
-    public ResponseEntity setEffort(@RequestBody SetEffortSchema eff, @ApiParam(value = "The project in which the effort mapping should be used.", example = "1", required = true) @RequestParam String project
+    @ApiOperation(value = "Set the mapping of effort points to hours for an specific project.", notes = "")
+    public ResponseEntity setEffort(@RequestBody SetEffortSchema setEffortSchema, @ApiParam(value = "The project in which the effort mapping should be used.", example = "1", required = true) @RequestParam String project
             , @ApiParam(value = "The organization that is making the request.", example = "UPC", required = true) @RequestParam String organization) throws IOException {
         Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         String s = formatter.format(new Date());
         System.out.println(s + " | Starting set effort from " + organization);
-        effortCalc.setEffort(eff, project, organization);
+        effortCalc.setEffort(setEffortSchema, project, organization);
         s = formatter.format(new Date());
         System.out.println(s + " | Finished set effort from " + organization);
         return new ResponseEntity(HttpStatus.CREATED);
     }
 
     @RequestMapping(value = "computeEffort", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
-    @ApiOperation(value = "This endpoint generates a mapping of effort points into hours specific to the project specified, based in the historic information given. Each requirement sohuld contain the effort stated in a scale from 1 to 5, and the hours that have been needed to complete this requirement. Taking this into account, the service computes the average of hours needed per effort point.", notes = "")
-    public ResponseEntity calculateEffort(@RequestBody EffortCalculatorSchema eff, @ApiParam(value = "The project in which the effort mapping will be used in future recommendations.", example = "1", required = true) @RequestParam String project
+    @ApiOperation(value = "This endpoint generates a mapping of effort points into hours specific to the project specified, based in the historic information given. Each requirement sohuld contain the effort, and the hours that have been needed to complete this requirement. Taking this into account, the service computes the average of hours needed per effort point.", notes = "")
+    public ResponseEntity calculateEffort(@RequestBody EffortCalculatorSchema effortCalculatorSchema, @ApiParam(value = "The project in which the effort mapping will be used in future recommendations.", example = "1", required = true) @RequestParam String project
             , @ApiParam(value = "The organization that is making the request.", example = "UPC", required = true) @RequestParam String organization) throws IOException {
         Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         String s = formatter.format(new Date());
         System.out.println(s + " | Starting computation of effort from " + organization);
-        effortCalc.effortCalc(eff, project, organization);
+        effortCalc.effortCalc(effortCalculatorSchema, project, organization);
         s = formatter.format(new Date());
         System.out.println(s + " | Finished computation of effort from " + organization);
         return new ResponseEntity(HttpStatus.CREATED);
     }
 
-    @RequestMapping(value = "undoRejection", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "undoRejection", method = RequestMethod.POST)
     @ApiOperation(value = "This endpoint is used to state that the user identified by REJECTED will again be considered as valid to the REQUIREMENT when the person USER ask for a recommendation over this requirement.", notes = "")
     public ResponseEntity undoRejection(@ApiParam(value = "Id of the person who was rejected.", example = "Not JohnDoe", required = true) @RequestParam("rejected") String rejected, @ApiParam(value = "Id of the person who made the initial rejection.", example = "JohnDoe", required = true) @RequestParam("user") String user, @ApiParam(value = "Id of the requirement from which the person REJECTED was rejected by the person USER.", example = "1", required = true) @RequestParam("requirement") String requirement
             , @ApiParam(value = "The organization that is making the request.", example = "UPC", required = true) @RequestParam String organization) {
@@ -135,7 +136,7 @@ public class StakeholdersRecommenderController {
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
 
-    @RequestMapping(value = "getPersonSkills", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "getPersonSkills", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Get the set of skills of a person", notes = "")
     public ResponseEntity getPersonSkills(@ApiParam(value = "Id of the person.", example = "Not JohnDoe", required = true) @RequestParam("person") String person,
                                           @ApiParam(value = "The organization that is making the request.", example = "UPC", required = true) @RequestParam("organization") String organization,
@@ -146,6 +147,9 @@ public class StakeholdersRecommenderController {
         List<Skill> skills = stakeholdersRecommenderService.getPersonSkills(person, organization, k);
         s = formatter.format(new Date());
         System.out.println(s + " | Finished get person skills from " + organization);
+        if (skills==null || skills.size()==0) return new ResponseEntity<>("{\n" +
+                "\t\"response\": \"The person either did not exist, or had no skills\"\n" +
+                "}", HttpStatus.BAD_REQUEST);
         return new ResponseEntity<>(skills, HttpStatus.OK);
     }
 

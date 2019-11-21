@@ -37,7 +37,7 @@ public class SwaggerConfig {
                         "\n" +
                         "3.  Availability of persons. Persons have a number of hours to work in a project. The component calculates how many hours the persons have still available for a project. After that, the available hours are normalized in a rank from 0 to 1. The use of implicit context information and availability is parameterized, so users can choose when to use it and when not. \n" +
                         "Finally, the recommendation of stakeholders is done taking into account the keywords of the requirement, the skills and proficiency values that the persons have, and the availabilityof the persons.",
-                "0.0",
+                "2.0",
                 null,
                 null,
                 null,

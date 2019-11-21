@@ -7,7 +7,6 @@ import upc.stakeholdersrecommender.domain.TextPreprocessing;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -19,12 +18,14 @@ public class TFIDFKeywordExtractor {
     private HashMap<String, Integer> corpusFrequency = new HashMap<>();
     private TextPreprocessing text_preprocess = new TextPreprocessing();
 
+
     public TFIDFKeywordExtractor(Double cutoff) {
         if (cutoff == -1.0) cutoffParameter = 4.0;
         else cutoffParameter = cutoff;
     }
 
-    static Map<String, Map<String, Double>> getStringMapMap(List<Requirement> corpus, List<Map<String, Double>> res, int counter) {
+    static Map<String, Map<String, Double>> getStringMapMap(List<Requirement> corpus, List<Map<String, Double>> res) {
+        int counter=0;
         Map<String, Map<String, Double>> ret = new HashMap<>();
         for (Requirement r : corpus) {
             ret.put(r.getId(), res.get(counter));
@@ -33,6 +34,11 @@ public class TFIDFKeywordExtractor {
         return ret;
     }
 
+    /**
+     * Computes the term frequency of each word in the text, and updates the Idf,
+     * @param doc List of strings to analyze
+     * @return Returns a map identified by <Word,word_frequency>
+     */
     private Map<String, Integer> tf(List<String> doc) {
         Map<String, Integer> frequency = new HashMap<>();
         for (String s : doc) {
@@ -51,12 +57,22 @@ public class TFIDFKeywordExtractor {
         return StrictMath.log(size.doubleValue() / frequency.doubleValue() + 1.0);
     }
 
+    /**
+     * Preprocesses the text
+     * @param text Text to preprocess
+     * @param analyzer Analyzer to use
+     * @return Returns a list of cleaned strings
+     */
     private List<String> analyze(String text, Analyzer analyzer) throws IOException {
-        List<String> result = new ArrayList<>();
         text = clean_text(text);
-        return RAKEKeywordExtractor.getAnalyzedStrings(text, analyzer, result);
+        return RAKEKeywordExtractor.getAnalyzedStrings(text, analyzer);
     }
 
+    /**
+     * Preprocesses the text
+     * @param text Text to preprocess
+     * @return Returns a list of cleaned strings
+     */
     private List<String> englishAnalyze(String text) throws IOException {
         Analyzer analyzer = CustomAnalyzer.builder()
                 .withTokenizer("standard")
@@ -67,6 +83,11 @@ public class TFIDFKeywordExtractor {
         return analyze(text, analyzer);
     }
 
+    /**
+     * Computes Tf-Idf on a corpus of requirements
+     * @param corpus Corpus to be used for tf-idf
+     * @return Returns a map of maps, compromised of <Requirement_id, <word,tf-idf_value>>
+     */
     public Map<String, Map<String, Double>> computeTFIDF(List<Requirement> corpus) throws IOException, ExecutionException, InterruptedException {
         List<List<String>> trueDocs = new ArrayList<>();
         for (Requirement r : corpus) {
@@ -74,10 +95,16 @@ public class TFIDFKeywordExtractor {
             trueDocs.add(s);
         }
         List<Map<String, Double>> res = tfIdf(trueDocs);
-        return getStringMapMap(corpus, res, 0);
+        return getStringMapMap(corpus, res);
 
     }
-
+    /**
+     * Computes Tf-Idf on a single requirement, with a given model
+     * @param model Model of inverse document frequency
+     * @param corpusSize Number of total unique requirements
+     * @param req Requirement to be analyzed by tf-idf
+     * @return Returns a list of strings that represent the words that had a higher value than the selectivity factor
+     */
     public List<String> computeTFIDFSingular(Requirement req, Map<String, Integer> model, Integer corpusSize) throws IOException {
         List<String> doc = englishAnalyze(clean_text(req.getDescription()));
         Map<String, Integer> wordBag = tf(doc);
@@ -94,6 +121,13 @@ public class TFIDFKeywordExtractor {
         return keywords;
     }
 
+    /**
+     * Computes Tf-Idf on a map of requirements, with a given model
+     * @param model Model of inverse document frequency
+     * @param size Number of total unique requirements
+     * @param trueRecs Requirements to be analyzed by tf-idf
+     * @return Returns a map maps, compromised by <Requirement_id, <Word,tf-idf_value>>
+     */
     public Map<String, Map<String, Double>> computeTFIDFExtra(Map<String, Integer> model, Integer size, Map<String, Requirement> trueRecs) throws IOException {
         Map<String, Map<String, Double>> result = new HashMap<>();
         for (String l : trueRecs.keySet()) {
@@ -117,6 +151,11 @@ public class TFIDFKeywordExtractor {
     }
 
 
+    /**
+     * Computes Tf-Idf on a list of lists
+     * @param docs Corpus to be used for Tf-Idf
+     * @return Returns a list of maps, compromised by <Word,tf-idf_value>
+     */
     private List<Map<String, Double>> tfIdf(List<List<String>> docs) {
         List<Map<String, Double>> tfidfComputed = new ArrayList<>();
         List<Map<String, Integer>> wordBag = new ArrayList<>();
@@ -141,6 +180,12 @@ public class TFIDFKeywordExtractor {
 
     }
 
+    /**
+     * Preprocesses the text and adds two special rules to help keyword extraction, these are that any word entirely in capital letters is to be made a keyword,
+     * and that any word between [] is to be made a keyword
+     * @param text Text to preprocess
+     * @return Returns a list of cleaned strings
+     */
     private String clean_text(String text) throws IOException {
         text = text_preprocess.text_preprocess(text);
         String result = "";

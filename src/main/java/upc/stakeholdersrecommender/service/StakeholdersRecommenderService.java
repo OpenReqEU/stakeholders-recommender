@@ -17,6 +17,7 @@ import upc.stakeholdersrecommender.repository.*;
 import javax.transaction.Transactional;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.time.Clock;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Logger;
@@ -59,6 +60,16 @@ public class StakeholdersRecommenderService {
         return Arrays.copyOf(elements, length);
     }
 
+    /**
+     * Recomends a list of stakeholders for a given recommend request
+     * @param request Request with requirement, sender and project
+     * @param k Maximum number of stakeholders to return
+     * @param projectSpecific Whether only stakeholers who are assigned to this project, or any stakeholder is considered
+     * @param organization Organization that made the request
+     * @param test Only used for mock testing, ignore if not testing
+     * @return Returns an ordered list comprised of the top k stakeholders
+     */
+
     public List<RecommendReturnSchema> recommend(RecommendSchema request, int k, Boolean projectSpecific, String organization, Integer test) throws Exception {
         verifyRecommend(request);
         String p = request.getProject().getId();
@@ -81,7 +92,7 @@ public class StakeholdersRecommenderService {
             if (!rake) {
                 Integer size = pro.getRecSize();
                 newReq.setSkills(new TFIDFKeywordExtractor(pro.getSelectivity()).computeTFIDFSingular(requirement, KeywordExtractionModelRepository.getOne(organization).getModel(), size));
-            } else newReq.setSkills(new RAKEKeywordExtractor().computeTFIDFSingular(requirement));
+            } else newReq.setSkills(new RAKEKeywordExtractor().computeRakeSingular(requirement));
         }
         List<String> comps = new ArrayList<>();
         if (request.getRequirement().getRequirementParts() != null) {
@@ -130,12 +141,21 @@ public class StakeholdersRecommenderService {
         return ret;
     }
 
+    /**
+     * Verifies a recommend request
+     * @param request Request with requirement, sender and project
+     */
     private void verifyRecommend(RecommendSchema request) throws Exception {
         if (request.getRequirement() == null) throw new Exception("Requirement in request is null");
         if (request.getProject() == null) throw new Exception("Project in request is null");
         if (request.getUser() == null) throw new Exception("User in request is null");
     }
-
+    /**
+     * Removes stakeholders who have been rejected in the past from this recommendation
+     * @param persList Request with requirement, sender and project
+     * @param organization String representing organization that made the request
+     * @param requirement Id identifying the requirement
+     */
     private List<PersonSR> removeRejected(List<PersonSR> persList, String user, String organization, String requirement) {
         List<PersonSR> newList = new ArrayList<>();
         RejectedPerson rej = RejectedPersonRepository.findByUser(new RejectedPersonId(user, organization));
@@ -204,7 +224,13 @@ public class StakeholdersRecommenderService {
         percentage = intersect / (double) req.getSkillsSet().size();
         return percentage;
     }
-
+    /**
+     * Return an array composed of the top K stakeholders and their recommendation value
+     * @param persList List of stakeholders to be considered
+     * @param hours Hours the requirement requires
+     * @param projectSpecific Whether this request is specific to a project, or to all
+     * @return An array of pairs, of size k, ordered by their recommendation value
+     */
     private Pair<PersonSR, Double>[] computeBestStakeholders(List<PersonSR> persList, RequirementSR req, Double hours, int k, Boolean projectSpecific) throws IOException, ExecutionException, InterruptedException {
         List<Pair<PersonSR, Pair<Double, Double>>> valuesForSR = new ArrayList<>();
         Set<String> reqSkills = req.getSkillsSet();
@@ -335,7 +361,14 @@ public class StakeholdersRecommenderService {
             KeywordExtractionModelRepository.deleteById(organization);
 
     }
-
+    /**
+     * Add the person identified by rejectedId to the list of blacklisted stakeholders for the specified requeriment by requiremintId
+     * when the request is made by userId
+     * @param rejectedId Id of person to reject
+     * @param userId Id of the stakeholder
+     * @param requirementId Id of the requirement
+     * @param organization Organization making this request
+     */
     public void recommend_reject(String rejectedId, String userId, String requirementId, String organization) {
         if (RejectedPersonRepository.findByUser(new RejectedPersonId(userId, organization)) != null) {
             RejectedPerson rejected = RejectedPersonRepository.findByUser(new RejectedPersonId(userId, organization));
@@ -364,11 +397,25 @@ public class StakeholdersRecommenderService {
         }
     }
 
-    public Integer addBatch(BatchSchema request, Boolean withAvailability, Boolean withComponent, String organization, Boolean autoMapping, Boolean bugzillaPreprocessing, Boolean logging, Integer test, Double selectivity) throws Exception {
+    /**
+     * Adds to the database the processed input, to be used for future recommendations
+     * @param request List of stakeholders to be considered
+     * @param withAvailability Hours the requirement requires
+     * @param withComponent Whether this request is specific to a project, or to all
+     * @param organization Organization making the request
+     * @param autoMapping Whether the mapping of effort points to hours is assumed to be 1 to 1 or not
+     * @param bugzillaPreprocessing Whether the external service for keyword extraction is used
+     * @param logging Whether the external service for logging is used
+     * @param test Used for mock tests, to be ignored if not testing
+     * @param selectivity Value to be used for tf-idf keyword discrimination factor
+     * @param clock
+     * @return The amount of objects processed
+     */
+    public Integer addBatch(BatchSchema request, Boolean withAvailability, Boolean withComponent, String organization, Boolean autoMapping, Boolean bugzillaPreprocessing, Boolean logging, Integer test, Double selectivity, Clock clock) throws Exception {
         purgeByOrganization(organization);
         verify(request);
-        Boolean vogella=false;
-        if (organization.equals("Vogella")) vogella=true;
+        Boolean vogella = false;
+        if (organization.equals("Vogella")) vogella = true;
         Map<String, Requirement> recs = new HashMap<>();
         List<Requirement> requeriments;
         if (bugzillaPreprocessing) {
@@ -391,10 +438,10 @@ public class StakeholdersRecommenderService {
         Map<String, Map<String, Double>> allSkills;
         if (!bugzillaPreprocessing) {
             if (requeriments.size() > 100) rake = false;
-            if (rake) allSkills = SkillExtractor.computeAllSkillsRequirementRAKE(recs, organization,vogella);
-            else allSkills = SkillExtractor.computeAllSkillsRequirement(recs, organization, selectivity,vogella);
+            if (rake) allSkills = SkillExtractor.computeAllSkillsRequirementRAKE(recs, vogella,clock);
+            else allSkills = SkillExtractor.computeAllSkillsRequirement(recs, organization, selectivity, vogella,clock);
         } else {
-            allSkills = SkillExtractor.computeAllSkillsNoMethod(recs,vogella);
+            allSkills = SkillExtractor.computeAllSkillsNoMethod(recs, vogella,clock);
         }
         Map<String, Integer> skillfrequency = getSkillFrequency(allSkills);
         Map<String, Map<String, Double>> allComponents = new HashMap<>();
@@ -411,17 +458,17 @@ public class StakeholdersRecommenderService {
                     }
                 allComponents.put(req.getId(), component);
             }
-            allComponents = extractDate(recs, allComponents,vogella);
+            allComponents = SkillExtractor.computeTimeFactor(recs,allComponents,clock, vogella);
         }
         Set<String> projs = new HashSet<>();
         Set<String> seenPersons = new HashSet<>();
         Integer recSize = request.getRequirements().size();
 
-        Pair<Map<String, Map<String, Double>>, Map<String, Map<String, Pair<Integer, Integer>>>> pair = null;
+        LoggingInformation pair = null;
         Map<String, Integer> loggingFrequency = null;
 
         if (logging) {
-            pair = RiLogging.getUserLogging(bugzillaPreprocessing, rake, organization, recSize, test, selectivity,vogella);
+            pair = RiLogging.getUserLogging(bugzillaPreprocessing, rake, organization, recSize, test, selectivity, vogella,clock);
             loggingFrequency = getSkillFrequency(pair.getFirst());
         }
 
@@ -513,8 +560,9 @@ public class StakeholdersRecommenderService {
         }
     }
 
+
     private void instanciateLeftovers(Set<String> persons, Set<String> oldIds, Map<String, Map<String, Double>> allSkills, Map<String, Set<String>> personRecs, Map<String, Integer> skillFrequency, Boolean withComponent
-            , Map<String, Map<String, Double>> allComponents, Map<String, Integer> componentFrequency, String organization, Pair<Map<String, Map<String, Double>>, Map<String, Map<String, Pair<Integer, Integer>>>> pair, Map<String, Integer> loggingFrequency) throws JsonProcessingException {
+            , Map<String, Map<String, Double>> allComponents, Map<String, Integer> componentFrequency, String organization, LoggingInformation pair, Map<String, Integer> loggingFrequency) throws JsonProcessingException {
         String newId = RandomStringUtils.random(15, true, true);
         while (oldIds.contains(newId)) newId = RandomStringUtils.random(15, true, true);
         List<PersonSR> toSave = new ArrayList<>();
@@ -544,11 +592,6 @@ public class StakeholdersRecommenderService {
         return s;
     }
 
-    private Map<String, Map<String, Double>> extractDate(Map<String, Requirement> recs, Map<String, Map<String, Double>> allComponents,Boolean vogella) {
-        Date dat = new Date();
-        return SkillExtractor.computeTimeFactor(recs, allComponents, dat,vogella);
-    }
-
     private Map<String, Integer> getSkillFrequency(Map<String, Map<String, Double>> allSkills) {
         Map<String, Integer> skillfrequency = new HashMap<>();
         for (String s : allSkills.keySet()) {
@@ -562,9 +605,24 @@ public class StakeholdersRecommenderService {
         }
         return skillfrequency;
     }
-
+    /**
+     * Processes stakeholders, and generates the information needed for recommendations, saving it to the database
+     * @param part Map comprised of <stakeholder,availability>
+     * @param withAvailability Whether availability is considered or not
+     * @param withComponent Whether components are considered or not
+     * @param organization Organization making the request
+     * @param allSkills Map comprised of <Requirement_id,<skill,skill_value>
+     * @param componentFrequency Frequency of each requirement_part
+     * @param pair Logging information, if null, won't be used
+     * @param loggingFrequency Value to be used for tf-idf keyword discrimination factor
+     * @param personRecs Requirements that this stakeholder is assigned to within this project
+     * @param skillFrequency Frequency of each skill in the corpus of the requirements
+     * @param specifiedReq All requirements of the project
+     * @param id Id of the project
+     * @return The amount of objects processed
+     */
     private void instanciateResourceBatch(Map<String, Double> part, List<Participant> persons, Map<String, Requirement> recs, Map<String, Map<String, Double>> allSkills, Map<String, Set<String>> personRecs, Map<String, Integer> skillFrequency, List<String> specifiedReq, String id, Boolean withAvailability, Boolean withComponent
-            , Map<String, Map<String, Double>> allComponents, Map<String, Integer> componentFrequency, String organization, Pair<Map<String, Map<String, Double>>, Map<String, Map<String, Pair<Integer, Integer>>>> pair, Map<String, Integer> loggingFrequency) throws Exception {
+            , Map<String, Map<String, Double>> allComponents, Map<String, Integer> componentFrequency, String organization, LoggingInformation pair, Map<String, Integer> loggingFrequency) throws Exception {
         List<PersonSR> toSave = new ArrayList<>();
         for (Participant person : persons) {
             List<Skill> skills;
@@ -602,8 +660,18 @@ public class StakeholdersRecommenderService {
 
     }
 
+    /**
+     * Returns the list of skills of the stakeholder
+     * @param componentFrequency Frequency of each requirement_part
+     * @param pair Logging information, if null, won't be used
+     * @param loggingFrequency Value to be used for tf-idf keyword discrimination factor
+     * @param oldRecs Requeriments to obtain skills from
+     * @param person Stakeholder to obtain the skills from
+     * @return The amount of objects processed
+     */
+
     private List<Skill> getSkills(Set<String> oldRecs, Map<String, Map<String, Double>> allComponents, Map<String, Integer> componentFrequency,
-                                  Pair<Map<String, Map<String, Double>>, Map<String, Map<String, Pair<Integer, Integer>>>> pair, String person, Map<String, Integer> loggingFrequency) throws JsonProcessingException {
+                                  LoggingInformation pair, String person, Map<String, Integer> loggingFrequency) throws JsonProcessingException {
         List<Skill> toret = new ArrayList<>();
         Map<String, SinglePair<Double>> appearances = getAppearances(oldRecs, allComponents, componentFrequency);
         Pair<Map<String, SinglePair<Double>>, Map<String, Pair<Integer, Integer>>> appearancesLog = null;
@@ -757,7 +825,7 @@ public class StakeholdersRecommenderService {
         return id;
     }
 
-    private List<Skill> computeSkillsPerson(Set<String> oldRecs, Map<String, Map<String, Double>> recs, Map<String, Integer> skillsFrequency, Pair<Map<String, Map<String, Double>>, Map<String, Map<String, Pair<Integer, Integer>>>> pair, String s, Map<String, Integer> loggingFrequency) throws JsonProcessingException {
+    private List<Skill> computeSkillsPerson(Set<String> oldRecs, Map<String, Map<String, Double>> recs, Map<String, Integer> skillsFrequency, LoggingInformation pair, String s, Map<String, Integer> loggingFrequency) throws JsonProcessingException {
         return getSkills(oldRecs, recs, skillsFrequency, pair, s, loggingFrequency);
     }
 
