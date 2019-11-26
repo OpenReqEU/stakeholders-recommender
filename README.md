@@ -35,7 +35,7 @@ Next sections provide a general overview of the technical details of the stakeho
 
 ### How to install
 
-    1. Download the gloVe model "glove.6B.50d.txt" from "nlp.stanford.edu/data/glove.6B.zip" and save it in the folder GloVe_model
+    1. Download the gloVe model from the latest release, and uncompress it on the root folder of the project
 
     2. Download and install 8 JDK and last Maven version. 
 
