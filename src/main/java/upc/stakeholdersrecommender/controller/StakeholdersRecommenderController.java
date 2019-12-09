@@ -72,7 +72,7 @@ public class StakeholdersRecommenderController {
 
     @RequestMapping(value = "reject_recommendation", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "This endpoint is used to state that the user identied by REJECTED must not be recommended for REQUIREMENT if USER performs the recommendation for REQUIREMENT.", notes = "")
-    public ResponseEntity recommendReject(@ApiParam(value = "Id of the person who is rejected.", example = "Not JohnDoe", required = true) @RequestParam("rejected") String rejected, @ApiParam(value = "Id of the person who makes the rejection.", example = "JohnDoe", required = true) @RequestParam("user") String user, @ApiParam(value = "Id of the requirement from which the person REJECTED is rejected.", example = "1", required = true) @RequestParam("requirement") String requirement
+    public ResponseEntity recommendReject(@ApiParam(value = "Id of the person who is rejected.", example = "John Doe", required = true) @RequestParam("rejected") String rejected, @ApiParam(value = "Id of the person who makes the rejection.", example = "John Doe", required = true) @RequestParam("user") String user, @ApiParam(value = "Id of the requirement from which the person REJECTED is rejected.", example = "1", required = true) @RequestParam("requirement") String requirement
             , @ApiParam(value = "The organization that is making the request.", example = "UPC", required = true) @RequestParam String organization) {
         Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         String s = formatter.format(new Date());
@@ -86,7 +86,7 @@ public class StakeholdersRecommenderController {
     @RequestMapping(value = "recommend", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Given a REQUIREMENT in a PROJECT, asked by a USER, the stakeholder recommender service performs a recommendation and returns a list of the best K stakeholders with an appropiateness between 0 and 1(being 1 the best appropriateness) based on the historic data given in the batch_process request.", notes = "", response = RecommendReturnSchema[].class)
     public ResponseEntity<List<RecommendReturnSchema>> recommend(@RequestBody RecommendSchema request,
-                                                                 @ApiParam(value = "Maximum number of stakeholders to be returned by the recommender.", example = "10", required = true) @RequestParam Integer k, @ApiParam(value = "If set to true, the recommendation only takes into account as possible set of stakeholders the ones in the project to which the requirement pertains. If set to false, this set of stakeholders will be all the stakeholders received in the batch_process of the organization that is making the request, and will take all stakeholders with enough availability in any project. The availabilityScore of the participants of other projects will be always one if they are considered. ", required = true, example = "false") @RequestParam Boolean projectSpecific
+                                                                 @ApiParam(value = "Maximum nuJohnDoember of stakeholders to be returned by the recommender.", example = "10", required = true) @RequestParam Integer k, @ApiParam(value = "If set to true, the recommendation only takes into account as possible set of stakeholders the ones in the project to which the requirement pertains. If set to false, this set of stakeholders will be all the stakeholders received in the batch_process of the organization that is making the request, and will take all stakeholders with enough availability in any project. The availabilityScore of the participants of other projects will be always one if they are considered. ", required = true, example = "false") @RequestParam Boolean projectSpecific
             , @ApiParam(value = "The organization that is making the request.", example = "UPC", required = true) @RequestParam String organization) throws Exception {
         Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         String s = formatter.format(new Date());
@@ -125,7 +125,7 @@ public class StakeholdersRecommenderController {
 
     @RequestMapping(value = "undoRejection", method = RequestMethod.POST)
     @ApiOperation(value = "This endpoint is used to state that the user identified by REJECTED will again be considered as valid to the REQUIREMENT when the person USER ask for a recommendation over this requirement.", notes = "")
-    public ResponseEntity undoRejection(@ApiParam(value = "Id of the person who was rejected.", example = "Not JohnDoe", required = true) @RequestParam("rejected") String rejected, @ApiParam(value = "Id of the person who made the initial rejection.", example = "JohnDoe", required = true) @RequestParam("user") String user, @ApiParam(value = "Id of the requirement from which the person REJECTED was rejected by the person USER.", example = "1", required = true) @RequestParam("requirement") String requirement
+    public ResponseEntity undoRejection(@ApiParam(value = "Id of the person who was rejected.", example = "John Doe", required = true) @RequestParam("rejected") String rejected, @ApiParam(value = "Id of the person who made the initial rejection.", example = "John Doe", required = true) @RequestParam("user") String user, @ApiParam(value = "Id of the requirement from which the person REJECTED was rejected by the person USER.", example = "1", required = true) @RequestParam("requirement") String requirement
             , @ApiParam(value = "The organization that is making the request.", example = "UPC", required = true) @RequestParam String organization) {
         Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         String s = formatter.format(new Date());
@@ -138,7 +138,7 @@ public class StakeholdersRecommenderController {
 
     @RequestMapping(value = "getPersonSkills", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Get the set of skills of a person", notes = "")
-    public ResponseEntity getPersonSkills(@ApiParam(value = "Id of the person.", example = "Not JohnDoe", required = true) @RequestParam("person") String person,
+    public ResponseEntity getPersonSkills(@ApiParam(value = "Id of the person.", example = "John Doe", required = true) @RequestParam("person") String person,
                                           @ApiParam(value = "The organization that is making the request.", example = "UPC", required = true) @RequestParam("organization") String organization,
                                           @ApiParam(value = "Maximum number of skills to be returned", example = "10", required = false) @RequestParam(value = "k", defaultValue = "-1", required = false) Integer k) {
         Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
