@@ -44,7 +44,7 @@ public class PreprocessService {
             }
             toSend.setRequirements(aux);
             RestTemplate temp = new RestTemplate();
-            RequirementPreprocessedList res = temp.postForObject("https://217.172.12.199:9406/keywords-extraction/requirements?stemmer=false", toSend, RequirementPreprocessedList.class);
+            RequirementPreprocessedList res = temp.postForObject("http://217.172.12.199:9406/keywords-extraction/requirements?stemmer=false", toSend, RequirementPreprocessedList.class);
             for (RequirementPreprocessed r : res.getRequirements()) {
                 Requirement re = reqMap.get(r.getId());
                 re.setDescription(r.getDescription());
@@ -87,7 +87,7 @@ public class PreprocessService {
         RestTemplate temp = new RestTemplate();
         List<String> result = new ArrayList<>();
         if (test == 0 || test == 1) {
-            RequirementPreprocessedList res = temp.postForObject("https://217.172.12.199:9406/keywords-extraction/requirements?stemmer=false", toSend, RequirementPreprocessedList.class);
+            RequirementPreprocessedList res = temp.postForObject("http://217.172.12.199:9406/keywords-extraction/requirements?stemmer=false", toSend, RequirementPreprocessedList.class);
             List<RequirementPreprocessed> re = res.getRequirements();
             RequirementPreprocessed processed = re.get(0);
             for (String j : processed.getDescription().split(" ")) {
