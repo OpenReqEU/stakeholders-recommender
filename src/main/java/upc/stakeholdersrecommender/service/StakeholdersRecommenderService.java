@@ -480,6 +480,7 @@ public class StakeholdersRecommenderService {
         Map<String, Integer> loggingFrequency = null;
 
         if (logging) {
+            pair = RiLogging.getUserLogging(bugzillaPreprocessing, rake, organization, recSize, test, selectivity, vogella,clock);
             loggingFrequency = getSkillFrequency(pair.getFirst());
             System.out.println("Logging computed");
         }
