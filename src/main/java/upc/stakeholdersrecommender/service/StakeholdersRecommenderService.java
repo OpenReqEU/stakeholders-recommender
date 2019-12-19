@@ -297,7 +297,7 @@ public class StakeholdersRecommenderService {
                 valuesForSR.add(valuePair);
             }
             counter++;
-            if (counter%5==0) System.out.println("Recommendation evaluation is at "+ (counter/size)*100+"%");
+            if (counter%50==0) System.out.println("Recommendation evaluation is at "+ (counter/size)*100+"%");
         }
         System.out.println("Recommendation evaluation is at 100%");
         Collections.sort(valuesForSR, Comparator.comparing(u -> u.getSecond().getFirst()));
@@ -672,7 +672,7 @@ public class StakeholdersRecommenderService {
             PersonSR per = new PersonSR(person.getPerson(), skills, hours, person.getProject(), organization, components, availability, new PersonSRId(id, person.getPerson(), organization));
             toSave.add(per);
             counter++;
-            if (counter.intValue()%5==0) System.out.println("Stakeholder instantiation of project "+id+" is at "+(counter/size)*100.0+"%");
+            if (counter.intValue()%50==0) System.out.println("Stakeholder instantiation of project "+id+" is at "+(counter/size)*100.0+"%");
         }
         PersonSRRepository.saveAll(toSave);
     }
