@@ -15,7 +15,9 @@ import upc.stakeholdersrecommender.entity.*;
 import upc.stakeholdersrecommender.repository.*;
 
 import javax.transaction.Transactional;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.time.Clock;
 import java.util.*;
@@ -24,9 +26,6 @@ import java.util.logging.Logger;
 
 import static java.lang.Double.max;
 
-// Bug de cross reference
-// Deploy de similarity
-//Paralelismo stakeholders-recommender
 @Service
 @Transactional
 public class StakeholdersRecommenderService {
@@ -235,6 +234,9 @@ public class StakeholdersRecommenderService {
         List<Pair<PersonSR, Pair<Double, Double>>> valuesForSR = new ArrayList<>();
         Set<String> reqSkills = req.getSkillsSet();
         List<String> component = req.getComponent();
+        Map<String,String> toPrint=new HashMap<>();
+        Double counter=0.0;
+        Double size=(double)persList.size();
         for (PersonSR person : persList) {
             Double sum = 0.0;
             Double compSum = 0.0;
@@ -280,7 +282,11 @@ public class StakeholdersRecommenderService {
             Map<String, Skill> skillTrad = new HashMap<>();
             Double appropiateness = null;
             appropiateness = getAppropiateness(reqSkills, person, skillTrad);
+            String toAdd=String.valueOf(appropiateness);
             res = res * 3 + person.getAvailability() + resComp * 10;
+            toAdd=toAdd+","+person.getAvailability();
+            toAdd=toAdd+","+resComp;
+            toPrint.put(person.getName(),toAdd);
             if ((projectSpecific && person.getAvailability() >= (hours / person.getHours())) && appropiateness != 0.0) {
                 Pair<Double, Double> auxPair = new Pair<>(-res, appropiateness);
                 Pair<PersonSR, Pair<Double, Double>> valuePair = new Pair<>(person, auxPair);
@@ -290,7 +296,10 @@ public class StakeholdersRecommenderService {
                 Pair<PersonSR, Pair<Double, Double>> valuePair = new Pair<>(person, auxPair);
                 valuesForSR.add(valuePair);
             }
+            counter++;
+            if (counter%5==0) System.out.println("Recommendation evaluation is at "+ (counter/size)*100+"%");
         }
+        System.out.println("Recommendation evaluation is at 100%");
         Collections.sort(valuesForSR, Comparator.comparing(u -> u.getSecond().getFirst()));
         if (k >= valuesForSR.size()) {
             k = valuesForSR.size();
@@ -299,6 +308,7 @@ public class StakeholdersRecommenderService {
         for (int i = 0; i < k && i < valuesForSR.size(); ++i) {
             out[i] = new Pair<>(valuesForSR.get(i).getFirst(), valuesForSR.get(i).getSecond().getSecond());
         }
+        System.out.println("Best stakeholders computed");
         return out;
     }
 
@@ -443,6 +453,7 @@ public class StakeholdersRecommenderService {
         } else {
             allSkills = SkillExtractor.computeAllSkillsNoMethod(recs, vogella,clock);
         }
+        System.out.println("Skills computed");
         Map<String, Integer> skillfrequency = getSkillFrequency(allSkills);
         Map<String, Map<String, Double>> allComponents = new HashMap<>();
         Map<String, Integer> componentFrequency = new HashMap<>();
@@ -459,6 +470,7 @@ public class StakeholdersRecommenderService {
                 allComponents.put(req.getId(), component);
             }
             allComponents = SkillExtractor.computeTimeFactor(recs,allComponents,clock, vogella);
+            System.out.println("Components computed");
         }
         Set<String> projs = new HashSet<>();
         Set<String> seenPersons = new HashSet<>();
@@ -468,8 +480,8 @@ public class StakeholdersRecommenderService {
         Map<String, Integer> loggingFrequency = null;
 
         if (logging) {
-            pair = RiLogging.getUserLogging(bugzillaPreprocessing, rake, organization, recSize, test, selectivity, vogella,clock);
             loggingFrequency = getSkillFrequency(pair.getFirst());
+            System.out.println("Logging computed");
         }
 
 
@@ -491,10 +503,12 @@ public class StakeholdersRecommenderService {
                 if (EffortRepository.findById(new ProjectSRId(proj.getId(), organization)) != null)
                     EffortRepository.deleteById(new ProjectSRId(proj.getId(), organization));
                 EffortRepository.save(effortMap);
+                System.out.println("Auto-effort computed");
             }
             List<Participant> part = new ArrayList<>();
             if (participants.containsKey(proj.getId())) part = participants.get(proj.getId());
             String id = instanciateProject(proj, part, organization, rake, recSize, bugzillaPreprocessing, selectivity);
+            System.out.println("Project "+id+" instanciated");
             Map<String, Double> hourMap = new HashMap<>();
             for (Participant par : part) {
                 hourMap.put(par.getPerson(), par.getAvailability());
@@ -503,11 +517,14 @@ public class StakeholdersRecommenderService {
                 seenPersons.add(p.getPerson());
             }
             instanciateFeatureBatch(proj.getSpecifiedRequirements(), id, allSkills, recs, withComponent, allComponents, organization);
+            System.out.println("Requirements for project "+id+" are at 100%");
             instanciateResourceBatch(hourMap, part, recs, allSkills, personRecs, skillfrequency, proj.getSpecifiedRequirements(), id, withAvailability, withComponent, allComponents, componentFrequency, organization, pair, loggingFrequency);
+            System.out.println("Stakeholders for project "+id+" are at 100%");
         }
         persons.removeAll(seenPersons);
         instanciateLeftovers(persons, projs, allSkills, personRecs, skillfrequency, withComponent, allComponents, componentFrequency, organization, pair, loggingFrequency);
         Integer particips = 0;
+        System.out.println("Leftovers finished");
         if (request.getParticipants() != null) particips = request.getParticipants().size();
         return request.getPersons().size() + request.getProjects().size() + request.getRequirements().size() + request.getResponsibles().size() + particips;
     }
@@ -624,6 +641,8 @@ public class StakeholdersRecommenderService {
     private void instanciateResourceBatch(Map<String, Double> part, List<Participant> persons, Map<String, Requirement> recs, Map<String, Map<String, Double>> allSkills, Map<String, Set<String>> personRecs, Map<String, Integer> skillFrequency, List<String> specifiedReq, String id, Boolean withAvailability, Boolean withComponent
             , Map<String, Map<String, Double>> allComponents, Map<String, Integer> componentFrequency, String organization, LoggingInformation pair, Map<String, Integer> loggingFrequency) throws Exception {
         List<PersonSR> toSave = new ArrayList<>();
+        Double counter=0.0;
+        Double size=(double) persons.size();
         for (Participant person : persons) {
             List<Skill> skills;
             List<Skill> components;
@@ -651,6 +670,8 @@ public class StakeholdersRecommenderService {
             else hours = hoursDefault;
             PersonSR per = new PersonSR(person.getPerson(), skills, hours, person.getProject(), organization, components, availability, new PersonSRId(id, person.getPerson(), organization));
             toSave.add(per);
+            counter++;
+            if (counter.intValue()%5==0) System.out.println("Stakeholder instantiation of project "+id+" is at "+(counter/size)*100.0+"%");
         }
         PersonSRRepository.saveAll(toSave);
     }
@@ -802,12 +823,16 @@ public class StakeholdersRecommenderService {
     private void instanciateFeatureBatch(List<String> requirement, String id, Map<String, Map<String, Double>> keywordsForReq, Map<String, Requirement> recs, Boolean withComponent, Map<String, Map<String, Double>> allComponents, String organization) {
         List<RequirementSR> reqs = new ArrayList<>();
         if (requirement != null) {
+            Double size=(double) requirement.size();
+            Double counter=0.0;
             for (String rec : requirement) {
                 RequirementSR req = new RequirementSR(recs.get(rec), id, organization);
                 ArrayList<String> aux = new ArrayList<>(keywordsForReq.get(rec).keySet());
                 req.setSkills(aux);
                 if (withComponent) req.setComponent(new ArrayList<>(allComponents.get(rec).keySet()));
                 reqs.add(req);
+                counter++;
+                if (counter.intValue()%100==0) System.out.println("Requirement instantiation of project "+id+" is at "+(counter/size)*100.0+"%");
             }
         }
         RequirementSRRepository.saveAll(reqs);
