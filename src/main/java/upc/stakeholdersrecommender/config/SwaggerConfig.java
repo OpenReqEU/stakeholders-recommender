@@ -8,6 +8,8 @@ import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spring.web.plugins.Docket;
 import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
+import java.util.HashSet;
+
 import static springfox.documentation.builders.PathSelectors.regex;
 
 @Configuration
@@ -16,11 +18,15 @@ public class SwaggerConfig {
 
     @Bean
     public Docket api() {
+        HashSet<String> protocols = new HashSet<>();
+        protocols.add("https");
         return new Docket(DocumentationType.SWAGGER_2)
                 .select()
                 .paths(regex("/upc/stakeholders-recommender.*"))
                 .paths(PathSelectors.any())
-                .build().apiInfo(apiInfo());
+                .build().apiInfo(apiInfo())
+                .host("api.openreq.eu/stakeholders-recommender")
+                .protocols(protocols);
     }
 
     private ApiInfo apiInfo() {
