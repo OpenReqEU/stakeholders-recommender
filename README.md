@@ -32,7 +32,7 @@ Next sections provide a general overview of the technical details of the stakeho
 * GloVe: GloVe model (&rarr; [https://nlp.stanford.edu/projects/glove/](https://nlp.stanford.edu/projects/glove/) )
 * riLogging: OpenReq microservice (&rarr; [https://github.com/OpenReqEU/ri-logging](https://github.com/OpenReqEU/ri-logging) )
 * keywords_preprocessing: OpenReq microservice (&rarr; [https://github.com/OpenReqEU/keywords-extraction](https://github.com/OpenReqEU/keywords-extraction) )
-
+ 
 ### How to install
 
     1. Download the gloVe model from the latest release, and uncompress it on the root folder of the project
