@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: upc.stakeholdersrecommender.service.StakeholdersRecommenderServiceTest
+-------------------------------------------------------------------------------
+Tests run: 17, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 99.428 s - in upc.stakeholdersrecommender.service.StakeholdersRecommenderServiceTest
