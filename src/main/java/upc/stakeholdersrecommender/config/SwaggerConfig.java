@@ -43,8 +43,7 @@ public class SwaggerConfig {
                         "since B has the knowledge closer in time. The time factor tries to balance these situations by deprecating the proficiency taking into " +
                         "account the date of the requirements. In addition, the skills of users are also gathered  from the implicit feedback got from an external OpenReq component" +
                         " ri-logging. With this implicit information, the component learns new skills or updates the proficiency of the skills of the persons by using the information" +
-                        " of how users interact with a user \n" +
-                        "interface to browse, create and edit requirements.\n" +
+                        " of how users interact with a user interface to browse, create and edit requirements.\n" +
                         "\n" +
                         "3.  Availability of persons. Persons have a number of hours to work on a project. The component calculates how many hours the persons have still available for" +
                         " a project. After that, the available hours are normalized in a rank from 0 to 1. The use of implicit context information and availability is parameterized, so " +
