@@ -283,7 +283,7 @@ public class StakeholdersRecommenderService {
             Double appropiateness = null;
             appropiateness = getAppropiateness(reqSkills, person, skillTrad);
             String toAdd=String.valueOf(appropiateness);
-            res = res * 3 + person.getAvailability() + resComp * 10;
+            res = res * 3 + person.getAvailability() + resComp * 30;
             toAdd=toAdd+","+person.getAvailability();
             toAdd=toAdd+","+resComp;
             toPrint.put(person.getName(),toAdd);
