@@ -9,6 +9,14 @@ public class ProjectMinimal {
     @ApiModelProperty(notes = "Identifier of project.", example = "\"1\"", required = true)
     private String id;
 
+    public ProjectMinimal() {
+
+    }
+
+    public ProjectMinimal(String id) {
+        this.id = id;
+    }
+
     public String getId() {
         return id;
     }

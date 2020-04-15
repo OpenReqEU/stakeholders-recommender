@@ -1,8 +1,10 @@
 package upc.stakeholdersrecommender.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
+import upc.stakeholdersrecommender.domain.Schemas.PersonMinimal;
 import upc.stakeholdersrecommender.domain.Schemas.RequirementPart;
 import upc.stakeholdersrecommender.entity.Skill;
 
@@ -12,6 +14,7 @@ import java.util.Date;
 import java.util.List;
 
 @ApiModel(description = "Class representing a requirement.")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Requirement implements Serializable {
     @ApiModelProperty(notes = "Identifier of the requirement.", example = "\"1\"", required = true)
     private String id;
@@ -34,6 +37,17 @@ public class Requirement implements Serializable {
 
     public Requirement() {
 
+    }
+
+    public Requirement(String id, Double effort, List<RequirementPart> requirementParts, String name, List<Skill> skills, Date modified, String description, String modified_at) {
+        this.id = id;
+        this.effort = effort;
+        this.requirementParts = requirementParts;
+        this.name = name;
+        this.skills = skills;
+        this.modified = modified;
+        this.description = description;
+        this.modified_at = modified_at;
     }
 
     public Requirement(String id) {
@@ -106,5 +120,24 @@ public class Requirement implements Serializable {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    @Override
+    public boolean equals(Object v) {
+        boolean retVal = false;
+
+        if (v instanceof Requirement){
+            Requirement ptr = (Requirement) v;
+            retVal = ptr.getId().equals(this.getId());
+        }
+
+        return retVal;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 17 * hash + (this.getId() != null ? this.getId().hashCode() : 0);
+        return hash;
     }
 }

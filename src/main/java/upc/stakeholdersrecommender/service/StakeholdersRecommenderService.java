@@ -60,6 +60,90 @@ public class StakeholdersRecommenderService {
     }
 
     /**
+     * FOR EVALUATION PURPOSES
+     */
+    public List<List<RecommendReturnSchema>> recommendOptimization(RecommendSchema request, int k, Boolean projectSpecific, String organization, Integer test,
+                                                                   List<Double> apprWeights, List<Double> availabilityWeights, List<Double> compWeights) throws Exception {
+        verifyRecommend(request);
+        String p = request.getProject().getId();
+        List<RecommendReturnSchema> ret;
+        List<PersonSR> persList = new ArrayList<>();
+        RequirementSR req;
+        RequirementSR newReq = new RequirementSR();
+        Requirement requirement = request.getRequirement();
+        requirement.setDescription(requirement.getDescription() + ". " + requirement.getName());
+        newReq.setProjectIdQuery(request.getProject().getId());
+        newReq.setId(new RequirementSRId(request.getProject().getId(), request.getRequirement().getId(), organization));
+        ProjectSR pro = ProjectRepository.findById(new ProjectSRId(request.getProject().getId(), organization));
+        Boolean rake = pro.getRake();
+        Boolean bugzilla = pro.getBugzilla();
+        if (bugzilla) {
+            requirement.setDescription(pre.text_preprocess(requirement.getDescription()));
+            requirement.setName(pre.text_preprocess(requirement.getName()));
+            newReq.setSkills(Preprocess.preprocessSingular(requirement, test));
+        } else {
+            if (!rake) {
+                Integer size = pro.getRecSize();
+                newReq.setSkills(new TFIDFKeywordExtractor(pro.getSelectivity()).computeTFIDFSingular(requirement, KeywordExtractionModelRepository.getOne(organization).getModel(), size));
+            } else newReq.setSkills(new RAKEKeywordExtractor().computeRakeSingular(requirement));
+        }
+        List<String> comps = new ArrayList<>();
+        if (request.getRequirement().getRequirementParts() != null) {
+            for (RequirementPart l : request.getRequirement().getRequirementParts()) {
+                comps.add(l.getId());
+            }
+        }
+        newReq.setComponent(comps);
+        RequirementSRRepository.save(newReq);
+        req = newReq;
+        if (!projectSpecific) {
+            Set<String> uniquePersons = new HashSet<>();
+            for (PersonSR pers : PersonSRRepository.findByOrganization(organization)) {
+                if (!uniquePersons.contains(pers.getName())) {
+                    //if (hasTime(pers, organization)) {
+                    if (true) {
+                        uniquePersons.add(pers.getName());
+                        PersonSR per = new PersonSR(pers);
+                        per.setAvailability(1.0);
+                        persList.add(per);
+                    }
+                }
+            }
+        } else {
+            persList.addAll(PersonSRRepository.findByProjectIdQueryAndOrganization(p, organization));
+        }
+        List<PersonSR> clean = removeRejected(persList, request.getUser().getUsername(), organization, request.getRequirement().getId());
+        Double hours = 100.0;
+        if (projectSpecific) {
+            Double effort = request.getRequirement().getEffort();
+            Effort e = EffortRepository.findById(new ProjectSRId(request.getProject().getId(), organization));
+            if (e != null) {
+                Map<Double, Double> effMap = e.getEffortMap();
+                if (effMap.containsKey(effort)) {
+                    hours = effMap.get(effort);
+                } else {
+                    hours = effort;
+                    Effort eff = e;
+                    effMap.put(effort, effort);
+                    eff.setEffortMap(effMap);
+                    EffortRepository.save(eff);
+                }
+            }
+        }
+        List<List<RecommendReturnSchema>> rets = new ArrayList<>();
+        for (int i = 0; i < apprWeights.size(); ++i) {
+            Pair<PersonSR, Double>[] bestPeople = computeBestStakeholders(clean, req, hours, k, projectSpecific,
+                    apprWeights.get(i), availabilityWeights.get(i), compWeights.get(i));
+            rets.add(prepareFinal(bestPeople, req));
+        }
+
+        return rets;
+    }
+    /**
+     * END FOR EVALUATION PURPOSES
+     */
+
+    /**
      * Recomends a list of stakeholders for a given recommend request
      * @param request Request with requirement, sender and project
      * @param k Maximum number of stakeholders to return
@@ -106,7 +190,8 @@ public class StakeholdersRecommenderService {
             Set<String> uniquePersons = new HashSet<>();
             for (PersonSR pers : PersonSRRepository.findByOrganization(organization)) {
                 if (!uniquePersons.contains(pers.getName())) {
-                    if (hasTime(pers, organization)) {
+                    //if (hasTime(pers, organization)) {
+                    if (true) {
                         uniquePersons.add(pers.getName());
                         PersonSR per = new PersonSR(pers);
                         per.setAvailability(1.0);
@@ -135,7 +220,7 @@ public class StakeholdersRecommenderService {
                 }
             }
         }
-        Pair<PersonSR, Double>[] bestPeople = computeBestStakeholders(clean, req, hours, k, projectSpecific);
+        Pair<PersonSR, Double>[] bestPeople = computeBestStakeholders(clean, req, hours, k, projectSpecific, apprWeight, availabilityWeight, compWeight);
         ret = prepareFinal(bestPeople, req);
         return ret;
     }
@@ -223,6 +308,11 @@ public class StakeholdersRecommenderService {
         percentage = intersect / (double) req.getSkillsSet().size();
         return percentage;
     }
+
+    public Double apprWeight = 3.;
+    public Double availabilityWeight = 1.;
+    public Double compWeight = 30.;
+
     /**
      * Return an array composed of the top K stakeholders and their recommendation value
      * @param persList List of stakeholders to be considered
@@ -230,7 +320,8 @@ public class StakeholdersRecommenderService {
      * @param projectSpecific Whether this request is specific to a project, or to all
      * @return An array of pairs, of size k, ordered by their recommendation value
      */
-    private Pair<PersonSR, Double>[] computeBestStakeholders(List<PersonSR> persList, RequirementSR req, Double hours, int k, Boolean projectSpecific) throws IOException, ExecutionException, InterruptedException {
+    private Pair<PersonSR, Double>[] computeBestStakeholders(List<PersonSR> persList, RequirementSR req, Double hours, int k, Boolean projectSpecific,
+                                                             Double apprWeight, Double availabilityWeight, Double compWeight) throws IOException, ExecutionException, InterruptedException {
         List<Pair<PersonSR, Pair<Double, Double>>> valuesForSR = new ArrayList<>();
         Set<String> reqSkills = req.getSkillsSet();
         List<String> component = req.getComponent();
@@ -271,19 +362,20 @@ public class StakeholdersRecommenderService {
                         }
                     }
                 }
-                resComp = compSum / component.size();
+                resComp = component.size() > 0 ? compSum / component.size() : 0;
             }
             Double res;
             if (reqSkills.size() == 0) {
                 res = 0.0;
             } else {
-                res = sum / reqSkills.size();
+                res = reqSkills.size() > 0 ? sum / reqSkills.size() : 0;
             }
             Map<String, Skill> skillTrad = new HashMap<>();
             Double appropiateness = null;
             appropiateness = getAppropiateness(reqSkills, person, skillTrad);
             String toAdd=String.valueOf(appropiateness);
-            res = res * 3 + person.getAvailability() + resComp * 30;
+            //res = res * 3 + person.getAvailability() + resComp * 30;
+            res = res * apprWeight + person.getAvailability() * availabilityWeight + resComp * compWeight;
             toAdd=toAdd+","+person.getAvailability();
             toAdd=toAdd+","+resComp;
             toPrint.put(person.getName(),toAdd);

@@ -1,5 +1,6 @@
 package upc.stakeholdersrecommender.domain.Schemas;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import upc.stakeholdersrecommender.domain.Participant;
@@ -11,6 +12,7 @@ import java.io.Serializable;
 import java.util.List;
 
 @ApiModel(description = "Class representing the information needed for the recommendation of stakeholders.")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class BatchSchema implements Serializable {
     @ApiModelProperty(notes = "List of projects.", required = true)
     private List<Project> projects;

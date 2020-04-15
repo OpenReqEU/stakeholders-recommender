@@ -176,7 +176,7 @@
                 <configuration>
                     <forkCount>1</forkCount>
                     <reuseForks>true</reuseForks>
-                    <argLine>-Xmx3072m -XX:MaxPermSize=1024m</argLine>
+                    <!--argLine>-Xmx3072m -XX:MaxPermSize=1024m</argLine--> 
                 </configuration>
             </plugin>
             <plugin>
