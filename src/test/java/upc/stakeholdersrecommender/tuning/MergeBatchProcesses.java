@@ -7,6 +7,7 @@ import upc.stakeholdersrecommender.domain.Requirement;
 import upc.stakeholdersrecommender.domain.Responsible;
 import upc.stakeholdersrecommender.domain.Schemas.BatchSchema;
 import upc.stakeholdersrecommender.domain.Schemas.PersonMinimal;
+import upc.stakeholdersrecommender.domain.Schemas.RequirementPart;
 
 import java.io.File;
 
@@ -18,7 +19,7 @@ public class MergeBatchProcesses {
 
         //Object to JSON in file
         try {
-            BatchSchema batchSchema1 = mapper.readValue(new File("src/main/resources/tuningFiles/batch-process-evaluation.json"), BatchSchema.class);
+            /*BatchSchema batchSchema1 = mapper.readValue(new File("src/main/resources/tuningFiles/batch-process-evaluation.json"), BatchSchema.class);
             BatchSchema batchSchema2 = mapper.readValue(new File("src/main/resources/tuningFiles/batch-process-evaluation-PDE.json"), BatchSchema.class);
 
             for (PersonMinimal p : batchSchema2.getPersons()) {
@@ -44,9 +45,15 @@ public class MergeBatchProcesses {
                 if (!batchSchema1.getParticipants().contains(p)) {
                     batchSchema1.getParticipants().add(p);
                 }
-            }
+            }*/
 
-            mapper.writeValue(new File("src/main/resources/tuningFiles/batch-process-evaluation-merged.json"), batchSchema1);
+            BatchSchema batchSchema1 = mapper.readValue(new File("src/main/resources/tuningFiles/batch-process-evaluation-merged.json"), BatchSchema.class);
+            for (Requirement r : batchSchema1.getRequirements()) {
+                for (RequirementPart rp : r.getRequirementParts()) {
+                    rp.setId(rp.getName());
+                }
+            }
+            mapper.writeValue(new File("src/main/resources/tuningFiles/batch-process-evaluation-merged-solved.json"), batchSchema1);
             //TODO merge
             System.out.println("Done");
         } catch (Exception e) {

@@ -6,10 +6,12 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import upc.stakeholdersrecommender.domain.Schemas.PersonMinimal;
 import upc.stakeholdersrecommender.domain.Schemas.RequirementPart;
+import upc.stakeholdersrecommender.entity.RequirementSR;
 import upc.stakeholdersrecommender.entity.Skill;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 

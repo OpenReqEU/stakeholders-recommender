@@ -1,6 +1,5 @@
 package upc.stakeholdersrecommender.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -9,9 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import upc.stakeholdersrecommender.domain.Requirement;
 import upc.stakeholdersrecommender.domain.Schemas.*;
-import upc.stakeholdersrecommender.entity.RequirementSR;
 import upc.stakeholdersrecommender.entity.Skill;
 import upc.stakeholdersrecommender.service.EffortCalculator;
 import upc.stakeholdersrecommender.service.StakeholdersRecommenderService;
@@ -20,9 +17,7 @@ import java.io.*;
 import java.text.Format;
 import java.text.SimpleDateFormat;
 import java.time.Clock;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 
 //
@@ -42,119 +37,36 @@ public class StakeholdersRecommenderController {
     /*
     * INIT EVALUATION METHODS
     * */
-    @RequestMapping(value = "batch_process_with_analysis", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    @ApiOperation(value = "This endpoint is used to upload the required data for making stakeholder recommendations. The parameter withAvailability species whether " +
-            "availability is calculated based on the stakeholder's past history or not. All information in the database is purged every time this method is called. " +
-            "A person's relation to the project is defined with PARTICIPANT (availability is expressed in hours), while the person is defined in PERSONS, the " +
-            "requirements in REQUIREMENTS, the project in PROJECTS, and a person's relation to a requirement in RESPONSIBLES (i.e., the person is the one in charge " +
-            "of the requirement).")
-    public ResponseEntity addBatchAndRunAnalysis(@RequestBody BatchSchema batch, @ApiParam(value = "If set to true, the recommendations for the organization making the request will take into account the stakeholder’s availability. If set to false, the field “availability” in participant is optional.", example = "false", required = true)
-    @RequestParam Boolean withAvailability, @ApiParam(value = "If set to true, the recommendations for the organization making the request will take into account the requirement’s component (which is expressed in the requirementParts field of a requirement). If set to false, it is not necessary to state the component.", example = "false", required = true)
-                                   @RequestParam Boolean withComponent, @ApiParam(value = "The organization that is making the request.", example = "UPC", required = true)
-                                   @RequestParam String organization, @ApiParam(value = "If auto-mapping is used (i.e., set to true), it is not necessary to set or compute effort (i.e., to establish the mapping from effort points to hours). The mapping used in auto-mapping is a 1 to 1 mapping of effort to hours.", example = "true", required = true)
-                                   @RequestParam Boolean autoMapping, @ApiParam(value = "If set to true, the endpoint returns each requirement with its set of keywords instead of its normal return object.", example = "false", required = false, defaultValue = "false")
-                                   @RequestParam(value = "keywords", defaultValue = "false", required = false) Boolean keywords, @ApiParam(value = "Whether a specific separate text preprocessor is used", example = "true", required = false) @RequestParam(value = "keywordPreprocessing", defaultValue = "false", required = false) Boolean bugzilla,
-                                   @ApiParam(value = "Whether OpenReq Live logging is taken into account", example = "false", required = false) @RequestParam(value = "logging", defaultValue = "false", required = false) Boolean logging,
-                                   @ApiParam(value = "Keyword selectivity factor, higher means less, only used if more than 100 requirements, and no specific keyword tool is specified", example = "4", required = false) @RequestParam(value = "selectivityFactor", defaultValue = "-1", required = false) Double selectivity) throws Exception {
 
+    @RequestMapping(value = "compute_recall_rate", method = RequestMethod.POST)
+    @ApiOperation(value = "Computes the recall-rate@k for k=1..20 using the weights sent with the request (default otherwise)")
+    public ResponseEntity recallRate(@ApiParam(value="The organization that is making the request.", example = "UPC", required = true)
+                                         @RequestParam String organization, @RequestBody BatchSchema batch) throws Exception {
+        Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        String s = formatter.format(new Date());
+        System.out.println(s + " | Starting recall-rate evaluation process");
+
+        stakeholdersRecommenderService.recallRate(organization, batch);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "optimization", method = RequestMethod.POST)
+    @ApiOperation(value = "Applies a gradient descent optimization process using the requirements dataset of an already imported batch process" +
+            " and an input CSV file including 3 entities for each line: the requirement of the recommendation, a good stakeholder recommendation, and" +
+            " a bad stakeholder recommendation. The optimization process is based on maximizing de appropiateness difference value" +
+            " between both recommendations")
+    public ResponseEntity optimization(@ApiParam(value = "The organization that is making the request.", example = "UPC", required = true)
+                                           @RequestParam String organization
+                                       ) throws Exception {
 
         Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         String s = formatter.format(new Date());
-        System.out.println(s + " | Starting batch process from " + organization);
-        System.out.println("Processing " + batch.getRequirements().size() + " requeriments");
-        int res = 0;
-        try {
-            //res = stakeholdersRecommenderService.addBatch(batch, withAvailability, withComponent, organization, autoMapping, bugzilla, logging, 0, selectivity,Clock.systemDefaultZone());
+        System.out.println(s + " | Starting optimization process from " + organization);
 
-            String csvFile = "src/main/resources/tuningFiles/params.csv";
-            String line = "";
-            String cvsSplitBy = ",";
+        stakeholdersRecommenderService.optimize(organization);
 
-            StringBuilder sb = new StringBuilder("");
-            List<Double> apprWeights = new ArrayList<>();
-            List<Double> availabilityWeights = new ArrayList<>();
-            List<Double> compWeights = new ArrayList<>();
-
-            try (BufferedReader br = new BufferedReader(new FileReader(csvFile))) {
-                while ((line = br.readLine()) != null) {
-                    String[] fields = line.split(cvsSplitBy);
-                    apprWeights.add(Double.valueOf(fields[0]));
-                    availabilityWeights.add(Double.valueOf(fields[1]));
-                    compWeights.add(Double.valueOf(fields[2]));
-                }
-            }
-
-            ObjectMapper mapper = new ObjectMapper();
-            HashMap<String,HashMap<String, List<String>>> optResults =
-                    mapper.readValue(new File("src/main/resources/tuningFiles/optimization-results.json"), HashMap.class);
-
-            HashMap<String, Integer> high = new HashMap<>();
-            HashMap<String, Integer> low = new HashMap<>();
-            HashMap<String, Integer> medium = new HashMap<>();
-
-            int i = 0;
-            for (String reqId : optResults.keySet()) {
-                if (i % 5 == 0) System.out.println("\t Evaluation process: " + (double) i + "%");
-                ++i;
-                RecommendSchema recommendSchema = new RecommendSchema();
-                recommendSchema.setProject(new ProjectMinimal(batch.getProjects().get(0).getId()));
-                recommendSchema.setUser(new PersonMinimal(batch.getPersons().get(0).getUsername()));
-                boolean found = false;
-                int k = 0;
-                while (!found && k < batch.getRequirements().size()) {
-                    if (batch.getRequirements().get(k).getId().equals(reqId)) {
-                        recommendSchema.setRequirement(batch.getRequirements().get(k));
-                        found = true;
-                    } else ++k;
-                }
-
-                List<List<RecommendReturnSchema>> recommendations = stakeholdersRecommenderService.recommendOptimization(recommendSchema, 10, false, organization, 0,
-                        apprWeights, availabilityWeights, compWeights);
-
-                for (int j = 0; j < recommendations.size(); ++j) {
-                    Integer highCount = 0;
-                    Integer mediumCount = 0;
-                    Integer lowCount = 0;
-                    for (RecommendReturnSchema r : recommendations.get(j)) {
-                        if (optResults.get(reqId).get("high").contains(r.getPerson().getUsername())) ++highCount;
-                        if (optResults.get(reqId).get("medium").contains(r.getPerson().getUsername())) ++mediumCount;
-                        if (optResults.get(reqId).get("low").contains(r.getPerson().getUsername())) ++lowCount;
-                    }
-                    String key = apprWeights.get(j) + "," + availabilityWeights.get(j) + "," + compWeights.get(j);
-                    if (high.containsKey(key)) high.put(key, high.get(key) + highCount);
-                    else high.put(key, highCount);
-                    if (low.containsKey(key)) low.put(key, low.get(key) + lowCount);
-                    else low.put(key, lowCount);
-                    if (medium.containsKey(key)) medium.put(key, medium.get(key) + mediumCount);
-                    else medium.put(key, mediumCount);
-                }
-            }
-            for (String key : high.keySet()) {
-                sb.append(key + "," + high.get(key) + "," + low.get(key) + "\n");
-            }
-
-            //TODO compute recall-rate@k
-            //TODO compute MAP
-
-            BufferedWriter writer = new BufferedWriter(new FileWriter("src/main/resources/tuningFiles/output.csv"));
-            writer.write(sb.toString());
-            writer.close();
-
-        } catch (IOException e) {
-            s = formatter.format(new Date());
-            System.out.println(s + " | Finished batch process " + organization + " for " + organization);
-            return new ResponseEntity(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-        if (!keywords) {
-            s = formatter.format(new Date());
-            System.out.println(s + " | Finished batch process from " + organization);
-            return new ResponseEntity<>(new BatchReturnSchema(res), HttpStatus.CREATED);
-        } else {
-            s = formatter.format(new Date());
-            List<ProjectKeywordSchema> keys = stakeholdersRecommenderService.extractKeywords(organization, batch);
-            System.out.println(s + " | Finished batch process " + organization);
-            return new ResponseEntity<>(keys, HttpStatus.CREATED);
-        }
+        return new ResponseEntity<>(HttpStatus.OK);
     }
     /*
     * FINISH EVALUATION METHODS

@@ -10,6 +10,15 @@ public class RequirementPart implements Serializable {
     @ApiModelProperty(notes = "The name of the requirement part", example = "\"UI\"", required = true)
     String name;
 
+    public RequirementPart () {
+
+    }
+
+    public RequirementPart(String id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
     public String getId() {
         return id;
     }

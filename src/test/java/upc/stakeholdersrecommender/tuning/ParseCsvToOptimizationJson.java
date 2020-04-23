@@ -6,10 +6,7 @@ import upc.stakeholdersrecommender.domain.Schemas.BatchSchema;
 import upc.stakeholdersrecommender.domain.Schemas.PersonMinimal;
 import upc.stakeholdersrecommender.service.StakeholdersRecommenderService;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -145,7 +142,47 @@ public class ParseCsvToOptimizationJson {
             }
         }
 
+        StringBuilder sb = new StringBuilder();
+        //We group requirements in pairs of high level recommendations & low level recommendations
+        for (String reqId : reqsInfo.keySet()) {
+            HashMap<String, List<String>> reqAssignations = reqsInfo.get(reqId);
+            //We check if we have at least 1 high assignation and 1 low assignation
+            if (reqAssignations.get("high").size() > 0 && reqAssignations.get("low").size() > 0) {
+                //If so, we build triplets with reqId,high,low
+                for (String high : reqAssignations.get("high")) {
+                    for (String low : reqAssignations.get("low")) {
+                        sb.append(reqId + "," + high + "," + low + "\n");
+                    }
+                }
+            }
+            //If there aren't both high and low, we try to optimize high against medium
+            else if (reqAssignations.get("high").size() > 0 && reqAssignations.get("medium").size() > 0) {
+                //If so, we build triplets with reqId,high,low
+                for (String high : reqAssignations.get("high")) {
+                    for (String medium : reqAssignations.get("medium")) {
+                        sb.append(reqId + "," + high + "," + medium + "\n");
+                    }
+                }
+            }
+            //If there aren't both high and medium, we try to optimize medium against low
+            else if (reqAssignations.get("medium").size() > 0 && reqAssignations.get("low").size() > 0) {
+                //If so, we build triplets with reqId,high,low
+                for (String medium : reqAssignations.get("medium")) {
+                    for (String low : reqAssignations.get("low")) {
+                        sb.append(reqId + "," + medium + "," + low + "\n");
+                    }
+                }
+            }
+        }
+
+        //Store json with all assignations
         mapper.writeValue(new File("src/main/resources/tuningFiles/optimization-results.json"), reqsInfo);
+        //Store csv file with triplets
+        try (FileOutputStream oS = new FileOutputStream(new File("src/main/resources/tuningFiles/triplets.csv"))) {
+            oS.write(sb.toString().getBytes());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private static void carryOutAnalysis(HashMap<String, HashMap<String, List<String>>> reqsInfo) {

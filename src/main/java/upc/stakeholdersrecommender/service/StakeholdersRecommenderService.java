@@ -1,6 +1,7 @@
 package upc.stakeholdersrecommender.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.math3.util.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,9 +16,7 @@ import upc.stakeholdersrecommender.entity.*;
 import upc.stakeholdersrecommender.repository.*;
 
 import javax.transaction.Transactional;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.text.SimpleDateFormat;
 import java.time.Clock;
 import java.util.*;
@@ -62,83 +61,230 @@ public class StakeholdersRecommenderService {
     /**
      * FOR EVALUATION PURPOSES
      */
-    public List<List<RecommendReturnSchema>> recommendOptimization(RecommendSchema request, int k, Boolean projectSpecific, String organization, Integer test,
-                                                                   List<Double> apprWeights, List<Double> availabilityWeights, List<Double> compWeights) throws Exception {
-        verifyRecommend(request);
-        String p = request.getProject().getId();
-        List<RecommendReturnSchema> ret;
-        List<PersonSR> persList = new ArrayList<>();
-        RequirementSR req;
-        RequirementSR newReq = new RequirementSR();
-        Requirement requirement = request.getRequirement();
-        requirement.setDescription(requirement.getDescription() + ". " + requirement.getName());
-        newReq.setProjectIdQuery(request.getProject().getId());
-        newReq.setId(new RequirementSRId(request.getProject().getId(), request.getRequirement().getId(), organization));
-        ProjectSR pro = ProjectRepository.findById(new ProjectSRId(request.getProject().getId(), organization));
-        Boolean rake = pro.getRake();
-        Boolean bugzilla = pro.getBugzilla();
-        if (bugzilla) {
-            requirement.setDescription(pre.text_preprocess(requirement.getDescription()));
-            requirement.setName(pre.text_preprocess(requirement.getName()));
-            newReq.setSkills(Preprocess.preprocessSingular(requirement, test));
-        } else {
-            if (!rake) {
-                Integer size = pro.getRecSize();
-                newReq.setSkills(new TFIDFKeywordExtractor(pro.getSelectivity()).computeTFIDFSingular(requirement, KeywordExtractionModelRepository.getOne(organization).getModel(), size));
-            } else newReq.setSkills(new RAKEKeywordExtractor().computeRakeSingular(requirement));
+
+
+    public void recallRate(String organization, BatchSchema batchSchema) throws Exception {
+
+        ObjectMapper mapper = new ObjectMapper();
+        HashMap<String,HashMap<String, List<String>>> optResults =
+                mapper.readValue(new File("src/main/resources/tuningFiles/optimization-results.json"), HashMap.class);
+
+        int countHigh = 0;
+        int countLow = 0;
+        for (String req : optResults.keySet()) {
+            countHigh += optResults.get(req).get("high").size();
+            countLow += optResults.get(req).get("low").size();
         }
-        List<String> comps = new ArrayList<>();
-        if (request.getRequirement().getRequirementParts() != null) {
-            for (RequirementPart l : request.getRequirement().getRequirementParts()) {
-                comps.add(l.getId());
-            }
+
+        List<List<RecommendReturnSchema>> recommendationsListsOriginal =
+                recommendRequirements(organization, batchSchema, optResults);
+        /*apprWeight = -2.33680198014;
+        availabilityWeight = 1.35657990717;
+        compWeight = 8.46635564766;
+        List<List<RecommendReturnSchema>> recommendationsListsOptimized=
+                recommendRequirements(organization, batchSchema, optResults);
+
+        apprWeight = 3.;
+        availabilityWeight = 1.;
+        compWeight = 30.;*/
+
+        double[] recallRateOriginal = new double[20];
+        double[] recallRateOptimized = new double[20];
+        double[] recallRateOriginalLow = new double[20];
+        double[] recallRateOptimizedLow = new double[20];
+        for (int i = 0; i < 20; ++i) {
+            recallRateOriginalLow[i] = 0.;
+            recallRateOptimizedLow[i] = 0.;
+            recallRateOptimized[i] = 0.;
+            recallRateOriginal[i] = 0.;
         }
-        newReq.setComponent(comps);
-        RequirementSRRepository.save(newReq);
-        req = newReq;
-        if (!projectSpecific) {
-            Set<String> uniquePersons = new HashSet<>();
-            for (PersonSR pers : PersonSRRepository.findByOrganization(organization)) {
-                if (!uniquePersons.contains(pers.getName())) {
-                    //if (hasTime(pers, organization)) {
-                    if (true) {
-                        uniquePersons.add(pers.getName());
-                        PersonSR per = new PersonSR(pers);
-                        per.setAvailability(1.0);
-                        persList.add(per);
+
+        computeRecallRate(optResults, recommendationsListsOriginal, recallRateOriginal, recallRateOriginalLow, countHigh, countLow);
+        //computeRecallRate(optResults, recommendationsListsOptimized, recallRateOptimized, recallRateOptimizedLow, countHigh, countLow);
+
+    }
+
+    private void computeRecallRate(HashMap<String, HashMap<String, List<String>>> optResults, List<List<RecommendReturnSchema>> recommendationsListsOriginal,
+                                   double[] recallRate, double[] recallRateLow, int countHigh, int countLow) {
+
+        //RecallRate original
+        for (List<RecommendReturnSchema> r : recommendationsListsOriginal) {
+            if (r.size() > 0) {
+                String req = r.get(0).getRequirement().getId();
+                HashMap<String, List<String>> results = optResults.get(req);
+                for (int i = 0; i < 20; ++i) {
+                    if (r.size() > i) {
+                        if (results.get("high").contains(r.get(i).getPerson().getUsername())) {
+                            recallRate[i] += 1.;
+                        }
+                        else if (results.get("low").contains(r.get(i).getPerson().getUsername())) {
+                            recallRateLow[i] += 1.;
+                        }
                     }
                 }
             }
-        } else {
-            persList.addAll(PersonSRRepository.findByProjectIdQueryAndOrganization(p, organization));
-        }
-        List<PersonSR> clean = removeRejected(persList, request.getUser().getUsername(), organization, request.getRequirement().getId());
-        Double hours = 100.0;
-        if (projectSpecific) {
-            Double effort = request.getRequirement().getEffort();
-            Effort e = EffortRepository.findById(new ProjectSRId(request.getProject().getId(), organization));
-            if (e != null) {
-                Map<Double, Double> effMap = e.getEffortMap();
-                if (effMap.containsKey(effort)) {
-                    hours = effMap.get(effort);
-                } else {
-                    hours = effort;
-                    Effort eff = e;
-                    effMap.put(effort, effort);
-                    eff.setEffortMap(effMap);
-                    EffortRepository.save(eff);
-                }
-            }
-        }
-        List<List<RecommendReturnSchema>> rets = new ArrayList<>();
-        for (int i = 0; i < apprWeights.size(); ++i) {
-            Pair<PersonSR, Double>[] bestPeople = computeBestStakeholders(clean, req, hours, k, projectSpecific,
-                    apprWeights.get(i), availabilityWeights.get(i), compWeights.get(i));
-            rets.add(prepareFinal(bestPeople, req));
         }
 
-        return rets;
+        System.out.println("original,@1,@2,@3,@4,@5,@6,@7,@8,@9,@10,@11,@12,@13,@14,@15,@16,@17,@18,@19,@20");
+        List<String> resultsHigh = new ArrayList<>();
+        List<String> resultsLow = new ArrayList<>();
+        double sum = 0.;
+        double sumLow = 0.;
+        for (int i = 0; i < recallRate.length; ++i) {
+            sum += recallRate[i];
+            sumLow += recallRateLow[i];
+            resultsHigh.add(sum / (double) countHigh * 100 + "%");
+            resultsLow.add(sumLow / (double) countLow * 100 + "%");
+            //System.out.print(sum / (double) countHigh * 100 + "%,");
+        }
+        System.out.print("high,");
+        for (String s : resultsHigh) System.out.print(s + ",");
+        System.out.print("\n");
+        System.out.print("low,");
+        for (String s : resultsLow) System.out.print(s + ",");
+        System.out.print("\n");
     }
+
+    private List<List<RecommendReturnSchema>> recommendRequirements(String organization, BatchSchema batchSchema, HashMap<String, HashMap<String,
+            List<String>>> optResults) throws Exception {
+
+        List<List<RecommendReturnSchema>> recommendationsLists = new ArrayList<>();
+        int process = 0;
+        for (String reqId : optResults.keySet()) {
+            if (process % 5 == 0) System.out.println("Process at " + (double) process / (double) optResults.keySet().size() * 100. + "%");
+            ++process;
+            RecommendSchema recommendSchema = new RecommendSchema();
+            recommendSchema.setProject(new ProjectMinimal(batchSchema.getProjects().get(0).getId()));
+            recommendSchema.setUser(batchSchema.getPersons().get(0));
+            boolean found = false;
+            int k = 0;
+            while (!found && k < batchSchema.getRequirements().size()) {
+                if (batchSchema.getRequirements().get(k).getId().equals(reqId)) {
+                    Requirement req = batchSchema.getRequirements().get(k);
+                    recommendSchema.setRequirement(req);
+                    found = true;
+                } else ++k;
+            }
+
+            List<RecommendReturnSchema> recommendations = recommend(recommendSchema, 20, false, organization, 0);
+            recommendationsLists.add(recommendations);
+        }
+        return recommendationsLists;
+    }
+
+    public void optimize(String organization) throws Exception {
+        String csvFile = "src/main/resources/tuningFiles/triplets.csv";
+        String line = "";
+        String cvsSplitBy = ",";
+
+        List<String> requirements = new ArrayList<>();
+        List<String> goodRecommendations = new ArrayList<>();
+        List<String> badRecommendations = new ArrayList<>();
+
+        //We read the triplets information
+        try (BufferedReader br = new BufferedReader(new FileReader(csvFile))) {
+            while ((line = br.readLine()) != null) {
+                String[] fields = line.split(cvsSplitBy);
+                requirements.add(fields[0]);
+                goodRecommendations.add(fields[1]);
+                badRecommendations.add(fields[2]);
+            }
+        }
+
+        int N = 24;
+        double sigma = 1;
+
+        List<Integer> index = new ArrayList<>();
+        for (int i = 0; i < requirements.size(); ++i) {
+            index.add(i);
+        }
+
+        for (int i = 0; i < N; ++i) {
+            Collections.shuffle(index);
+            System.out.println("New iteration | Starting number " + (i + 1));
+            for (int j = 0; j < requirements.size(); ++j) {
+                String reqId = requirements.get(index.get(j));
+                String goodRec = goodRecommendations.get(index.get(j));
+                String badRec = badRecommendations.get(index.get(j));
+                List<Double> firstRes = computeStakeholderScore(PersonSRRepository.findById(new PersonSRId("1", badRec, organization)),
+                        RequirementSRRepository.findById(new RequirementSRId("1", reqId, organization)), apprWeight, availabilityWeight, compWeight);
+                List<Double> secondRes = computeStakeholderScore(PersonSRRepository.findById(new PersonSRId("1", goodRec, organization)),
+                        RequirementSRRepository.findById(new RequirementSRId("1", reqId, organization)), apprWeight, availabilityWeight, compWeight);
+                //Appropiateness weight
+                apprWeight = apprWeight - sigma * (-1) * (secondRes.get(0) - firstRes.get(0)) * (Math.exp(firstRes.get(3))) /
+                        (Math.exp(firstRes.get(3)) + Math.exp(secondRes.get(3)));
+                //Availability weight
+                availabilityWeight = availabilityWeight - sigma * (-1) * (secondRes.get(1) - firstRes.get(1)) * (Math.exp(firstRes.get(3))) /
+                        (Math.exp(firstRes.get(3)) + Math.exp(secondRes.get(3)));
+                //Component weight
+                compWeight = compWeight - sigma * (-1) * (secondRes.get(2) - firstRes.get(2)) * (Math.exp(firstRes.get(3))) /
+                        (Math.exp(firstRes.get(3)) + Math.exp(secondRes.get(3)));
+                String s = "";
+            }
+            System.out.println("New values");
+            System.out.println("\tApprWeight = " + apprWeight);
+            System.out.println("\tAvailabilityWeight = " + availabilityWeight);
+            System.out.println("\tComponentWeight = " + compWeight);
+        }
+
+    }
+
+
+    /*
+    Returns a double array with the following values:
+       0 -> res
+       1 -> availability
+       2 -> resComp
+       3 -> total
+     */
+    private List<Double> computeStakeholderScore(PersonSR person, RequirementSR req, Double apprWeight, Double availabilityWeight, Double compWeight) throws IOException, ExecutionException, InterruptedException {
+        Set<String> reqSkills = req.getSkillsSet();
+        List<String> component = req.getComponent();
+        Double sum = 0.0;
+        Double compSum = 0.0;
+        Double resComp = 0.0;
+        for (String s : req.getSkillsSet()) {
+            Double weightToAdd = 0.0;
+            Skill mostSimilarSkill = null;
+            for (Skill j : person.getSkills()) {
+                if (j.getName().equals(s)) {
+                    weightToAdd = 100.0;
+                    sum = sum + j.getWeight();
+                    break;
+                } else {
+                    Double val = null;
+                    val = WordEmbedding.computeSimilarity(j.getName(), s);
+                    if (val > weightToAdd) {
+                        weightToAdd = val;
+                        mostSimilarSkill = j;
+                    }
+                }
+            }
+            if (weightToAdd != 100.0) {
+                if (weightToAdd != 0.0)
+                    sum = sum + weightToAdd * mostSimilarSkill.getWeight();
+            }
+        }
+        if (component != null && person.getComponents() != null) {
+            for (String s : component) {
+                for (Skill j : person.getComponents()) {
+                    if (s.equals(j.getName())) {
+                        compSum += j.getWeight();
+                    }
+                }
+            }
+            resComp = component.size() > 0 ? compSum / component.size() : 0;
+        }
+        double res;
+        if (reqSkills.size() == 0) {
+            res = 0.0;
+        } else {
+            res = sum / reqSkills.size();
+        }
+        double score = res * apprWeight + person.getAvailability() * availabilityWeight + resComp * compWeight;
+        return Arrays.asList(res, person.getAvailability(), resComp, score);
+    }
+
     /**
      * END FOR EVALUATION PURPOSES
      */
@@ -309,9 +455,12 @@ public class StakeholdersRecommenderService {
         return percentage;
     }
 
-    public Double apprWeight = 3.;
+    /*public Double apprWeight = 3.;
     public Double availabilityWeight = 1.;
     public Double compWeight = 30.;
+    */public Double apprWeight = -2.33680198014;
+    public Double availabilityWeight = 1.35657990717;
+    public Double compWeight = 8.46635564766;
 
     /**
      * Return an array composed of the top K stakeholders and their recommendation value
